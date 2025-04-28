@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import odrl.lib.model.result.ConstraintResult;
 import org.apache.commons.compress.utils.Lists;
 
 import com.google.gson.JsonArray;
@@ -71,5 +72,19 @@ public class Action {
 		if(fulfilled)
 			return action;
 		return null;
+	}
+
+	public ConstraintResult solveResult(Map<String, String> prefixes) throws EvaluationException {
+		boolean fulfilled = false;
+		ConstraintResult result = new ConstraintResult();
+		for(int index=0; index < this.constraints.size(); index++) {
+			fulfilled = this.constraints.get(index).solve(prefixes);
+			if(!fulfilled) {
+				result.getFailCons().add(this.constraints.get(index));
+			}else {
+				result.getPassCons().add(this.constraints.get(index));
+			}
+		}
+		return result;
 	}
 }

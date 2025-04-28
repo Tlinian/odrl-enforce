@@ -18,6 +18,7 @@ import odrl.lib.model.exceptions.OperandException;
 import odrl.lib.model.exceptions.OperatorException;
 import odrl.lib.model.exceptions.UnsupportedFunctionException;
 import odrl.lib.model.functions.Time;
+import odrl.lib.model.result.EnforcePolicyResult;
 
 public class Tests {
 
@@ -37,6 +38,15 @@ public class Tests {
 		odrl.register("ops", new Time());
 		odrl.registerNative();
 		return odrl.solve(policyJson);
+	}
+
+	public static EnforcePolicyResult solvePolicyResult(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException {
+		JsonObject policyJson = Policies.fromJsonld11String(policy);
+
+		odrl.registerPrefix("ops", "http://upm.es/operands#");
+		odrl.register("ops", new Time());
+		odrl.registerNative();
+		return odrl.solveResult(policyJson);
 	}
 
 

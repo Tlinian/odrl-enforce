@@ -1,11 +1,10 @@
 package odrl.lib.model;
 
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
+import odrl.lib.model.result.ActionResult;
+import odrl.lib.model.result.ConstraintResult;
 import org.apache.commons.compress.utils.Lists;
 
 import com.google.gson.JsonArray;
@@ -81,6 +80,15 @@ public class Permission {
 		return actionsSolved;
 	}
 
+	public ActionResult solveResult(Map<String, String> prefixes) throws EvaluationException {
+		ActionResult actionResult = new ActionResult();
+		for(int index=0; index < this.actions.size(); index++) {
+			ConstraintResult constraintResult = this.actions.get(0).solveResult(prefixes);
+			// only permission single action
+			actionResult.getActionAndConstraintResults().put(Collections.singletonList(this.actions.get(index).getAction()), constraintResult);
+		}
+		return actionResult;
+	}
 
 
 }

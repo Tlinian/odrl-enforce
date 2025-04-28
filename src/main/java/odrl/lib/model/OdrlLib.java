@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 
+import odrl.lib.model.result.ActionResult;
+import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.jena.ext.com.google.common.collect.Maps;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -40,7 +42,8 @@ public class OdrlLib {
 
 	// private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
 	private static final String PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + "SELECT ?action ?target ?left ?right ?op WHERE { \n"
+			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+			"SELECT ?action ?target ?left ?right ?op WHERE { \n"
 			+ " ?policy odrl:permission ?permission . \n"
 			+ " ?permission odrl:action ?action .  \n"
 			+ " ?permission odrl:target ?target .\n"
@@ -49,6 +52,25 @@ public class OdrlLib {
 			+ " ?constraint odrl:rightOperand ?right .\n"
 			+ " ?constraint odrl:operator ?op .\n"
 			+ "} \n";
+
+	String queryStr =
+			"PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n" +
+					"PREFIX dct: <http://purl.org/dc/terms/>\n" +
+					"SELECT ?target (GROUP_CONCAT(DISTINCT ?action; separator=', ') AS ?actions) " +
+					"(GROUP_CONCAT(CONCAT(?leftOp, ' ', ?op, ' ', STR(?rightOp), ' (', COALESCE(?comment, ''), ')'); separator='; ') AS ?constraints)\n" +
+					"WHERE {\n" +
+					"  ?set a odrl:Set ;\n" +
+					"       odrl:permission ?permission .\n" +
+					"  ?permission odrl:target ?target .\n" +
+					"  OPTIONAL { ?permission odrl:action ?action . }\n" +
+					"  OPTIONAL {\n" +
+					"    ?permission odrl:constraint ?constraint .\n" +
+					"    ?constraint odrl:leftOperand ?leftOp ;\n" +
+					"                odrl:operator ?op ;\n" +
+					"                odrl:rightOperand ?rightOp .\n" +
+					"    OPTIONAL { ?constraint dct:comment ?comment . }\n" +
+					"  }\n" +
+					"} GROUP BY ?target";
 
 	protected static boolean debug = false;
 
@@ -98,6 +120,17 @@ public class OdrlLib {
 			List<String> actions = permission.solve(this.prefixes);
 			if (!actions.isEmpty())
 				allowedTo.put(permission.getTarget(), actions);
+		}
+		return allowedTo;
+	}
+
+	public EnforcePolicyResult solveResult(JsonObject policyJson)
+			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+		EnforcePolicyResult allowedTo = new EnforcePolicyResult();
+		List<Permission> permissions = mapToPermissions(policyJson);
+		for (Permission permission : permissions) {
+			ActionResult actions = permission.solveResult(this.prefixes);
+			allowedTo.getActionResults().add(actions);
 		}
 		return allowedTo;
 	}
@@ -229,11 +262,13 @@ public class OdrlLib {
 	protected static final String SPATIALF = "http://jena.apache.org/function/spatial#";
 	protected static final String SPATIAL = "http://jena.apache.org/spatial#";
 	protected static final String UNITS = "http://www.opengis.net/def/uom/OGC/1.0/";
+	protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
 
 	public void registerSpatial() {
 		registerPrefix("spatialF", SPATIALF);
 		registerPrefix("spatial", SPATIAL);
 		registerPrefix("units", UNITS);
+		registerPrefix("xsd", xsd);
 		registerPrefix("geosp", "http://www.opengis.net/ont/geosparql#");
 		try {
 			register("spatialF:convertLatLon");

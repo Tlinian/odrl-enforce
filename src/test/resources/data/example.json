@@ -1,0 +1,38 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Policy",
+  "uid": "https://upm.es/policy/6",
+  "permission": [{
+    "target": "https://jsonplaceholder.typicode.com/users/1",
+    "action": ["read", "process", "download"],
+    "constraint": [{
+      "leftOperand": "date",
+      "operator": "gt",
+      "rightOperand":  { "@value": "2022-01-01", "@type": "xsd:date" },
+      "dct:comment": "生效于至2022年初"
+    },{
+      "leftOperand": "date",
+      "operator": "lt",
+      "rightOperand":  { "@value": "2025-12-30", "@type": "xsd:date" },
+      "dct:comment": "截止于至2025年底"
+    },
+      {
+        "leftOperand": "partyRoleTeam",
+        "operator": "eq",
+        "rightOperand": "teamA",
+        "dct:comment": "使用者必须属于teamA"
+      },
+      {
+        "leftOperand": "partyRole",
+        "operator": "eq",
+        "rightOperand": "dataReceiver",
+        "dct:comment": "使用者必须是数据接收者角色"
+      },
+      {
+        "leftOperand": { "@value": "${count!6}", "@type": "odrl:count" },
+        "operator": "lteq",
+        "rightOperand": 5,
+        "dct:comment": "使用者最多使用资源5次"
+      }]
+  }]
+}
