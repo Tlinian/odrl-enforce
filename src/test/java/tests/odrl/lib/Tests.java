@@ -22,44 +22,51 @@ import odrl.lib.model.result.EnforcePolicyResult;
 
 public class Tests {
 
-	private Tests() {
-		super();
-	}
+    private Tests() {
+        super();
+    }
 
 
-	public static OdrlLib odrl = new OdrlLib();
-
-	
-	
-	public static Map<String, List<String>> solvePolicy(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException {
-		JsonObject policyJson = Policies.fromJsonld11String(policy);
-
-		odrl.registerPrefix("ops", "http://upm.es/operands#");
-		odrl.register("ops", new Time());
-		odrl.registerNative();
-		return odrl.solve(policyJson);
-	}
-
-	public static EnforcePolicyResult solvePolicyResult(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException {
-		JsonObject policyJson = Policies.fromJsonld11String(policy);
-
-		odrl.registerPrefix("ops", "http://upm.es/operands#");
-		odrl.register("ops", new Time());
-		odrl.registerNative();
-		return odrl.solveResult(policyJson);
-	}
+    public static OdrlLib odrl = new OdrlLib();
 
 
-	public static String readPolicy(String name) {
-		StringBuilder contentBuilder = new StringBuilder();
+    public static Map<String, List<String>> solvePolicy(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException {
+        JsonObject policyJson = Policies.fromJsonld11String(policy);
 
-		try (Stream<String> stream = Files.lines(Paths.get(name), StandardCharsets.UTF_8)){
+        odrl.registerPrefix("ops", "http://upm.es/operands#");
+        odrl.register("ops", new Time());
+        odrl.registerNative();
+        return odrl.solve(policyJson);
+    }
 
-		  stream.forEach(s -> contentBuilder.append(s).append("\n"));
-		}catch (IOException e){
-		  e.printStackTrace();
-		}
+    public static EnforcePolicyResult solvePolicyResult(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException {
+        JsonObject policyJson = Policies.fromJsonld11String(policy);
 
-		return  contentBuilder.toString();
-	}
+        odrl.registerPrefix("ops", "http://upm.es/operands#");
+        odrl.register("ops", new Time());
+        odrl.registerNative();
+        return odrl.solveResult(policyJson);
+    }
+
+    public static EnforcePolicyResult solvePolicyResult(String policy, Map<String, Object> interpolation) throws UnsupportedFunctionException, OdrlRegistrationException,
+            OperandException, OperatorException, EvaluationException {
+        odrl.registerPrefix("ops", "http://upm.es/operands#");
+        odrl.register("ops", new Time());
+        odrl.registerNative();
+        return odrl.solveResult(policy, interpolation);
+    }
+
+
+    public static String readPolicy(String name) {
+        StringBuilder contentBuilder = new StringBuilder();
+
+        try (Stream<String> stream = Files.lines(Paths.get(name), StandardCharsets.UTF_8)) {
+
+            stream.forEach(s -> contentBuilder.append(s).append("\n"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return contentBuilder.toString();
+    }
 }

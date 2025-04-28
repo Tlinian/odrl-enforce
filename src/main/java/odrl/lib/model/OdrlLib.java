@@ -76,6 +76,7 @@ public class OdrlLib {
 
 	private Map<String, String> prefixes = Maps.newHashMap();
 	private List<String> functions = Lists.newArrayList();
+	public static FreemarkerEngine engine = new FreemarkerEngine();
 
 	public OdrlLib() {
 		registerNative();
@@ -126,6 +127,19 @@ public class OdrlLib {
 
 	public EnforcePolicyResult solveResult(JsonObject policyJson)
 			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+		EnforcePolicyResult allowedTo = new EnforcePolicyResult();
+		List<Permission> permissions = mapToPermissions(policyJson);
+		for (Permission permission : permissions) {
+			ActionResult actions = permission.solveResult(this.prefixes);
+			allowedTo.getActionResults().add(actions);
+		}
+		return allowedTo;
+	}
+
+	public EnforcePolicyResult solveResult(String policy, Map<String, Object> interpolation)
+			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+		policy = engine.reduce(policy, interpolation, interpolation);
+		JsonObject policyJson = Policies.fromJsonld11String(policy);
 		EnforcePolicyResult allowedTo = new EnforcePolicyResult();
 		List<Permission> permissions = mapToPermissions(policyJson);
 		for (Permission permission : permissions) {
