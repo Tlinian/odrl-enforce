@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import odrl.lib.model.functions.nativeoperators.*;
 import odrl.lib.model.result.ActionResult;
 import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
@@ -25,12 +26,6 @@ import odrl.lib.model.exceptions.UnsupportedFunctionException;
 import odrl.lib.model.functions.DateTime;
 import odrl.lib.model.functions.IFunction;
 import odrl.lib.model.functions.Spatial;
-import odrl.lib.model.functions.nativeoperators.OdrlEq;
-import odrl.lib.model.functions.nativeoperators.OdrlGt;
-import odrl.lib.model.functions.nativeoperators.OdrlGteq;
-import odrl.lib.model.functions.nativeoperators.OdrlLt;
-import odrl.lib.model.functions.nativeoperators.OdrlLteq;
-import odrl.lib.model.functions.nativeoperators.OdrlNeq;
 import odrl.lib.model.nodes.IOperand;
 import odrl.lib.model.nodes.OperandFactory;
 import odrl.lib.model.nodes.OperandFunction;
@@ -297,6 +292,7 @@ public class OdrlLib {
 			// Operators
 			register("odrl", new OdrlEq());
 			register("odrl", new OdrlNeq());
+			register("odrl", new OdrlIn());
 			register("odrl", new OdrlGt());
 			register("odrl", new OdrlGteq());
 			register("odrl", new OdrlLt());
@@ -359,6 +355,7 @@ public class OdrlLib {
 	protected static final String SPATIAL = "http://jena.apache.org/spatial#";
 	protected static final String UNITS = "http://www.opengis.net/def/uom/OGC/1.0/";
 	protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
+//	protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
 
 	public void registerSpatial() {
 		registerPrefix("spatialF", SPATIALF);

@@ -1,0 +1,21 @@
+{
+  "@context": ["http://www.w3.org/ns/odrl.jsonld", {
+    "in": "https://w3id.org/def/in"
+  }],
+  "@type": "Policy",
+  "uid": "https://upm.es/policy/6",
+  "permission": [
+    {
+      "target": "http://example.com/asset:9898.movie",
+      "action": "display",
+      "constraint": [
+        {
+          "leftOperand": "dateTime",
+          "operator": "in",
+          "rightOperand":  { "@value": "2022-01-01T06:00:13.625668Z", "@type": "xsd:dateTime" },
+          "dct:comment": "生效于至2022年初"
+        }
+      ]
+    }
+  ]
+}

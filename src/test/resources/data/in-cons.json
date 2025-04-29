@@ -1,0 +1,20 @@
+{
+  "@context": ["http://www.w3.org/ns/odrl.jsonld", {
+    "in": "https://w3id.org/def/in"
+  }],
+  "@type": "Policy",
+  "uid": "https://upm.es/policy/6",
+  "permission": [
+    {
+      "target": "http://example.com/asset:9898.movie",
+      "action": "display",
+      "constraint": [
+        {
+          "leftOperand": { "@value": "2", "@type": "xsd:integer" },
+          "operator": "odrl:in",
+          "rightOperand": { "@value": "2", "@type": "xsd:integer" }
+        }
+      ]
+    }
+  ]
+}
