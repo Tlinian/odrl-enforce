@@ -1,6 +1,7 @@
 package odrl.lib.model;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -8,13 +9,9 @@ import odrl.lib.model.result.ActionResult;
 import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.jena.ext.com.google.common.collect.Maps;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QuerySolution;
-import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.rdf.model.impl.ResourceImpl;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.sparql.function.FunctionRegistry;
 
@@ -50,6 +47,46 @@ public class OdrlLib {
 			+ " ?permission odrl:constraint ?constraint .\n"
 			+ " ?constraint odrl:leftOperand ?left .\n"
 			+ " ?constraint odrl:rightOperand ?right .\n"
+			+ " ?constraint odrl:operator ?op .\n"
+			+ "} \n";
+	private static final String QUERY_REPLACEMENT = "#RULE_ID#";
+
+	private static final String CONSTRAINTS_QUERY_STRING = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+			"SELECT ?operator ?left_operand ?right_operand " +
+			"WHERE { <#RULE_ID#> odrl:operator ?operator;  " +
+			" odrl:leftOperand ?left_operand;  " +
+			" odrl:rightOperand ?right_operand . }";
+	private static final String RESTRICTIONS_QUERY_ARG_OPERATOR = "operator";
+	private static final String RESTRICTIONS_QUERY_ARG_LEFTOPERAND = "left_operand";
+	private static final String RESTRICTIONS_QUERY_ARG_RIGHTOPERAND = "right_operand";
+
+	// private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
+	private static final String PERMISSIONS2 = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+			"SELECT ?action ?target ?left ?right ?op ?constraint2 WHERE { \n"
+			+ " ?policy odrl:permission ?permission . \n"
+			+ " ?permission odrl:action ?action .  \n"
+			+ " ?permission odrl:target ?target .\n"
+			+ " ?permission odrl:constraint ?constraint .\n"
+			+ " OPTIONAL { \n" +
+			"        ?constraint odrl:leftOperand ?left .\n" +
+			"        ?constraint odrl:rightOperand ?right .\n" +
+			"    }\n"
+			+ " ?constraint odrl:operator ?op .\n"
+			+ " OPTIONAL { \n" +
+			"        ?constraint odrl:constraint ?constraint2 .\n" +
+			"    }\n"
+			+ "} \n";
+
+	private static final String OR_PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+			"SELECT ?action ?target ?left ?right ?op WHERE { \n"
+			+ " ?policy odrl:permission ?permission . \n"
+			+ " ?permission odrl:action ?action .  \n"
+			+ " ?permission odrl:target ?target .\n"
+			+ " ?permission odrl:constraint ?constraint .\n"
+			+ " ?constraint odrl:constraint ?constraint_chidren .\n"
 			+ " ?constraint odrl:operator ?op .\n"
 			+ "} \n";
 
@@ -154,7 +191,7 @@ public class OdrlLib {
 		List<Permission> permissions = Lists.newArrayList();
 		Model model = toRDFModel( policy);
 		model.write(System.out,"turtle");
-		ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS), model).execSelect();
+		ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS2), model).execSelect();
 		while (rs.hasNext()) {
 			QuerySolution qs = rs.next();
 			Permission permission = mapToPermission(model, qs);
@@ -179,27 +216,72 @@ public class OdrlLib {
 		return model;
 	}
 
-	private Permission mapToPermission(Model model, QuerySolution qs) throws OperandException, UnsupportedFunctionException, OperatorException {
+	private Permission mapToPermission(Model model, QuerySolution qs) throws OperandException, UnsupportedFunctionException, OperatorException, EvaluationException {
 		String target = qs.get("?target").toString();
 		String actionStr = qs.get("?action").toString();
 		RDFNode leftNode = qs.get("?left");
 		RDFNode rightNode = qs.get("?right");
 		RDFNode opNode = qs.get("?op");
+		RDFNode constraint_chidren = qs.get("?constraint2");
 
 		Permission permission = new Permission(target);
 		Action action = new Action(actionStr);
-		IOperand left = OperandFactory.createOperand(model, leftNode, functions);
-		IOperand right = OperandFactory.createOperand(model, rightNode, functions);
-		OperandFunction operator = OperandFactory.createOperandFunction(model, opNode, functions);
-		operator.getArguments().add(left);
-		operator.getArguments().add(right);
-		Constraint constraint = new Constraint(operator);
-		action.addConstraint(constraint);
+		if (opNode.toString().equals("http://www.w3.org/ns/odrl/2/or")){
+			// TODO: or constraint
+			// 将constraint_chidren里的left和op和right提取出来，使用jena
+			List<RDFNode[]> constraints = constraints2( constraint_chidren);
+			System.out.println();
+		}else {
+			IOperand left = OperandFactory.createOperand(model, leftNode, functions);
+			IOperand right = OperandFactory.createOperand(model, rightNode, functions);
+			OperandFunction operator = OperandFactory.createOperandFunction(model, opNode, functions);
+			operator.getArguments().add(left);
+			operator.getArguments().add(right);
+			Constraint constraint = new Constraint(operator);
+			action.addConstraint(constraint);
+		}
 		permission.addAction(action);
 		return permission;
 	}
 
+	public static List<RDFNode[]> constraints2(RDFNode restriction) throws EvaluationException {
+		List<RDFNode[]> restrictions = new ArrayList<>();
+		StmtIterator stmtIterator = ((ResourceImpl) restriction).listProperties();
+		while (stmtIterator.hasNext()){
+			Statement next = stmtIterator.next();
+			RDFNode object = next.getObject();
+			System.out.println(object);
+			restrictions.add(new RDFNode[]{object});
+		}
+		return restrictions;
+	}
 
+
+	public static List<RDFNode[]> constraints(Model model, RDFNode restriction) throws EvaluationException {
+		List<RDFNode[]> restrictions = new ArrayList<>();
+		// Instantiate CONSTRAINTS QUEY
+		// 查询出restriction里的RDFNode节点
+		if(!restriction.isResource())
+			throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
+		String constraintsQueryInstantiated = CONSTRAINTS_QUERY_STRING.replace(QUERY_REPLACEMENT, restriction.asResource().toString());
+
+		Query constraintsQuery = QueryFactory.create(constraintsQueryInstantiated);
+		QueryExecution qe = QueryExecutionFactory.create(constraintsQuery, model);
+		ResultSet rs = qe.execSelect();
+		// Gather constraints
+		while(rs.hasNext()){
+			QuerySolution querySolution = rs.nextSolution();
+			RDFNode operator = querySolution.get(RESTRICTIONS_QUERY_ARG_OPERATOR);
+			RDFNode leftOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_LEFTOPERAND);
+			RDFNode rightOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_RIGHTOPERAND);
+
+			restrictions.add(new RDFNode[]{operator, leftOperand, rightOperand});
+		}
+		qe.close();
+		if(restrictions.isEmpty())
+			throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
+		return restrictions;
+	}
 
 	public static boolean isDebug() {
 		return debug;
