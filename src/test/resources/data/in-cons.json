@@ -10,9 +10,9 @@
       "action": "display",
       "constraint": [
         {
-          "leftOperand": { "@value": "2", "@type": "xsd:integer" },
-          "operator": "odrl:in",
-          "rightOperand": { "@value": "2", "@type": "xsd:integer" }
+          "leftOperand": { "@value": "2", "@type": "xsd:string" },
+          "operator": "odrl:isAnyOf",
+          "rightOperand": {"@value": "2,3", "@type": "xsd:string"}
         }
       ]
     }

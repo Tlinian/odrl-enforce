@@ -65,5 +65,13 @@ public class OperandValue implements IOperand{
 		return sparqlRepresentation.toString();
 	}
 
-
+	@Override
+	public String toString() {
+		return "OperandValue{" +
+				"value='" + value + '\'' +
+				", type='" + type + '\'' +
+				", lang='" + lang + '\'' +
+				", isUri=" + isUri +
+				'}';
+	}
 }

@@ -47,20 +47,26 @@ public class OperandFunction implements IOperand {
 
 	@Override
 	public String toSPARQL() {
-		return "odrl:in(2, (1 2 3))";
-//		StringBuilder sparqlRepresentation = new StringBuilder();
-//		sparqlRepresentation.append(function);
-//		if(!isStringFunction) {
-//			sparqlRepresentation.append(TOKEN_PAR_1);
-//		for(int index=0; index < arguments.size();index++) {
-//				 sparqlRepresentation.append(arguments.get(index).toSPARQL());
-//				if(index+1<arguments.size())
-//					sparqlRepresentation.append(TOKEN_COMMA);
-//			}
-//		sparqlRepresentation.append(TOKEN_PAR_2);
-//		}
-//		return sparqlRepresentation.toString();
+		StringBuilder sparqlRepresentation = new StringBuilder();
+		sparqlRepresentation.append(function);
+		if(!isStringFunction) {
+			sparqlRepresentation.append(TOKEN_PAR_1);
+		for(int index=0; index < arguments.size();index++) {
+				 sparqlRepresentation.append(arguments.get(index).toSPARQL());
+				if(index+1<arguments.size())
+					sparqlRepresentation.append(TOKEN_COMMA);
+			}
+		sparqlRepresentation.append(TOKEN_PAR_2);
+		}
+		return sparqlRepresentation.toString();
 	}
 
-
+	@Override
+	public String toString() {
+		return "OperandFunction{" +
+				"function='" + function + '\'' +
+				", arguments=" + arguments +
+				", isStringFunction=" + isStringFunction +
+				'}';
+	}
 }

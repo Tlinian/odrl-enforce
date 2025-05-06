@@ -1,28 +1,36 @@
 package odrl.lib.model.functions.nativeoperators;
 
-import java.io.ByteArrayOutputStream;
-
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.sparql.expr.NodeValue;
-import org.apache.jena.sparql.function.FunctionBase2;
-import org.apache.jena.sparql.resultset.ResultsFormat;
-
-import  odrl.lib.model.Sparql;
+import odrl.lib.model.Sparql;
 import odrl.lib.model.exceptions.EvaluationException;
 import odrl.lib.model.exceptions.RuntimeEvaluationException;
-import odrl.lib.model.functions.IFunction;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.sparql.expr.NodeValue;
+import org.apache.jena.sparql.resultset.ResultsFormat;
 
-public abstract class OdrlNative extends FunctionBase2 implements IFunction{
+import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
-	protected static final String QUERY = "SELECT ?bind {  BIND ( #q1# #op# #q2#  AS ?bind ) }";
-	protected static final String QUERY_REPLACEMENT_1 = "#q1#";
-	protected static final String QUERY_REPLACEMENT_2 = "#q2#";
-	protected static final String QUERY_REPLACEMENT_3 = "#op#";
+public class OdrlIsAnyOf extends OdrlNative{
 
+	@Override
+	public String getName() {
+		return "isAnyOf";
+	}
+
+
+	@Override
+	public NodeValue exec(NodeValue v1, NodeValue v2) {
+		Boolean result = solveOperator(v1, v2, getName(), " in ");
+		return NodeValue.makeNodeBoolean(result);
+	}
+
+	@Override
 	protected Boolean solveOperator(NodeValue v1, NodeValue v2, String opName, String op) throws RuntimeEvaluationException {
 		Boolean result = false;
 		try {
-			String formattedQuery = QUERY.replace(QUERY_REPLACEMENT_1, v1.toString()).replace(QUERY_REPLACEMENT_2, v2.toString()).replace(QUERY_REPLACEMENT_3, op);
+			String v2Target = Arrays.stream(v2.getString().split(",")).map(s -> "\"" + s + "\"").collect(Collectors.joining(","));
+			String formattedQuery = QUERY.replace(QUERY_REPLACEMENT_1, v1.toString()).replace(QUERY_REPLACEMENT_2, "("+v2Target+")").replace(QUERY_REPLACEMENT_3, op);
 			ByteArrayOutputStream out = Sparql.queryModel(formattedQuery, ModelFactory.createDefaultModel(), ResultsFormat.FMT_RS_CSV, null);
 			String rawString = new String(out.toByteArray());
 			String rawBoolean = rawString.split("\n")[1].trim();
@@ -35,6 +43,5 @@ public abstract class OdrlNative extends FunctionBase2 implements IFunction{
 		}
 		return result;
 	}
-
 
 }

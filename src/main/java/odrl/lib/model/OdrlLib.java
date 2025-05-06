@@ -297,6 +297,7 @@ public class OdrlLib {
 			register("odrl", new OdrlGteq());
 			register("odrl", new OdrlLt());
 			register("odrl", new OdrlLteq());
+			register("odrl", new OdrlIsAnyOf());
 			// Operands
 			register("odrl", new DateTime());
 			register("odrl", new Spatial());
