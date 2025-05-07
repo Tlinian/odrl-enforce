@@ -48,6 +48,10 @@ public class Tests {
         return odrl.solveResult(policyJson);
     }
 
+    public static String solvePolicyResultToJson(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException, IllegalAccessException {
+        return odrl.solveResultToJson(policy);
+    }
+
     public static EnforcePolicyResult solvePolicyResult(String policy, Map<String, Object> interpolation) throws UnsupportedFunctionException, OdrlRegistrationException,
             OperandException, OperatorException, EvaluationException {
         odrl.registerPrefix("ops", "http://upm.es/operands#");

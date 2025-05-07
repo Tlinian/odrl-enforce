@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import odrl.lib.model.functions.Time;
 import odrl.lib.model.functions.nativeoperators.*;
 import odrl.lib.model.nodes.OrOperandFunction;
 import odrl.lib.model.result.ActionResult;
@@ -14,7 +17,6 @@ import org.apache.jena.ext.com.google.common.collect.Maps;
 import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.rdf.model.impl.ResourceImpl;
-import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.sparql.function.FunctionRegistry;
 
 import com.google.gson.JsonObject;
@@ -187,6 +189,23 @@ public class OdrlLib {
         return allowedTo;
     }
 
+    public String solveResultToJson(String policy)
+            throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException, OdrlRegistrationException, IllegalAccessException {
+        JsonObject policyJson = Policies.fromJsonld11String(policy);
+        OdrlLib odrl = new OdrlLib();
+        odrl.registerPrefix("ops", "http://upm.es/operands#");
+        odrl.register("ops", new Time());
+        odrl.registerNative();
+        EnforcePolicyResult allowedTo = new EnforcePolicyResult();
+        List<Permission> permissions = mapToPermissions(policyJson);
+        for (Permission permission : permissions) {
+            ActionResult actions = permission.solveResult(this.prefixes);
+            allowedTo.getActionResults().add(actions);
+        }
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(allowedTo);
+    }
+
     public EnforcePolicyResult solveResult(String policy, Map<String, Object> interpolation)
             throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
         policy = engine.reduce(policy, interpolation, interpolation);
@@ -209,7 +228,7 @@ public class OdrlLib {
         Map<String, OrOperandFunction> orConstraints = Maps.newHashMap();
         while (rs.hasNext()) {
             QuerySolution qs = rs.next();
-            Permission permission = mapToPermission(model, qs,orConstraints);
+            Permission permission = mapToPermission(model, qs, orConstraints);
             if (permissions.contains(permission)) {
                 int oldIndex = permissions.indexOf(permission);
                 Permission permissionOld = permissions.remove(oldIndex);
@@ -253,14 +272,14 @@ public class OdrlLib {
             OperandFunction operator = OperandFactory.createOperandFunction(model, childOpNode, functions);
             operator.getArguments().add(left);
             operator.getArguments().add(right);
-            OrOperandFunction operandFunction = new OrOperandFunction(shortenURI( model,  opNode.asResource().getURI()), new ArrayList<>(){
+            OrOperandFunction operandFunction = new OrOperandFunction(shortenURI(model, opNode.asResource().getURI()), new ArrayList<>() {
                 {
                     add(operator);
                 }
             }, false);
-            if (orConstraints.containsKey(parentConstraint.toString())){
+            if (orConstraints.containsKey(parentConstraint.toString())) {
                 orConstraints.get(parentConstraint.toString()).getOperands().add(operator);
-            }else {
+            } else {
                 Constraint constraint = new Constraint(operandFunction);
                 orConstraints.put(parentConstraint.toString(), operandFunction);
                 action.addConstraint(constraint);

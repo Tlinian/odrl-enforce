@@ -37,6 +37,10 @@ public class OperandFunction implements IOperand {
 		return function;
 	}
 
+	public Boolean getIsStringFunction() {
+		return isStringFunction;
+	}
+
 	public void setFunction(String function)  {
 		this.function = function;
 	}

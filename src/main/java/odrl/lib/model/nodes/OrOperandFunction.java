@@ -6,21 +6,16 @@ import java.util.List;
 
 public class OrOperandFunction extends OperandFunction {
 
-	private String function;
 	private List<OperandFunction> operandFunctions;
-	private Boolean isStringFunction = false;
 
 	public OrOperandFunction(String function)  {
 		super(function);
-		this.function = function;
 		this.operandFunctions = Lists.newArrayList();
 	}
 
 	public OrOperandFunction(String function, List<OperandFunction> operandFunctions, boolean isStringFunction) {
-		super(function);
-		this.function = function;
+		super(function,null, isStringFunction);
 		this.operandFunctions = operandFunctions;
-		this.isStringFunction = isStringFunction;
 	}
 
 
@@ -33,14 +28,6 @@ public class OrOperandFunction extends OperandFunction {
 		this.operandFunctions = operandFunctions;
 	}
 
-	public String getFunction() {
-		return function;
-	}
-
-	public void setFunction(String function)  {
-		this.function = function;
-	}
-
 	private static final char TOKEN_PAR_1 = '(';
 	private static final char TOKEN_PAR_2 = ')';
 	private static final char TOKEN_COMMA = ',';
@@ -48,8 +35,8 @@ public class OrOperandFunction extends OperandFunction {
 	@Override
 	public String toSPARQL() {
 		StringBuilder sparqlRepresentation = new StringBuilder();
-		sparqlRepresentation.append(function);
-		if(!isStringFunction) {
+		sparqlRepresentation.append(getFunction());
+		if(!getIsStringFunction()) {
 			sparqlRepresentation.append(TOKEN_PAR_1);
 			for(int index = 0; index < operandFunctions.size(); index++) {
 				 sparqlRepresentation.append(operandFunctions.get(index).toSPARQL());
@@ -64,9 +51,9 @@ public class OrOperandFunction extends OperandFunction {
 	@Override
 	public String toString() {
 		return "OperandFunction{" +
-				"function='" + function + '\'' +
+				"function='" + getFunction() + '\'' +
 				", arguments=" + operandFunctions +
-				", isStringFunction=" + isStringFunction +
+				", isStringFunction=" + getIsStringFunction() +
 				'}';
 	}
 }

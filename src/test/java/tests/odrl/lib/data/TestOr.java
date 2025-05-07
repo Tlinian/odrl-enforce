@@ -29,7 +29,8 @@ public class TestOr {
 //		Map<String, List<String>> result = Tests.solvePolicy(policy);
 //		System.out.println(result);
 //		Assert.assertTrue(result.isEmpty());
-		EnforcePolicyResult enforcePolicyResult = Tests.solvePolicyResult(policy);
-		System.out.println(enforcePolicyResult);
+//		EnforcePolicyResult enforcePolicyResult = Tests.solvePolicyResult(policy);
+//		System.out.println(enforcePolicyResult);
+		System.out.println(Tests.solvePolicyResultToJson(policy));
 	}
 }
