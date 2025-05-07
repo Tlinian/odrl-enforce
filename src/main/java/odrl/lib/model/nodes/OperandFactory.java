@@ -134,7 +134,7 @@ public class OperandFactory {
 
 
 
-	private static String shortenURI(Model model, String node) throws UnsupportedFunctionException {
+	public static String shortenURI(Model model, String node) throws UnsupportedFunctionException {
 		String shortenURI = null;
 		Optional<Entry<String, String>> prefix = model.getNsPrefixMap().entrySet().parallelStream().filter(entry -> node.startsWith(entry.getValue())).findFirst();
 		if(prefix.isPresent()) {

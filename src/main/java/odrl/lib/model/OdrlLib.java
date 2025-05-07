@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import odrl.lib.model.functions.nativeoperators.*;
+import odrl.lib.model.nodes.OrOperandFunction;
 import odrl.lib.model.result.ActionResult;
 import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
@@ -29,6 +30,8 @@ import odrl.lib.model.functions.Spatial;
 import odrl.lib.model.nodes.IOperand;
 import odrl.lib.model.nodes.OperandFactory;
 import odrl.lib.model.nodes.OperandFunction;
+
+import static odrl.lib.model.nodes.OperandFactory.shortenURI;
 
 public class OdrlLib {
 
@@ -64,7 +67,7 @@ public class OdrlLib {
             "            ?isString, \n" +
             "            CONCAT(\"'\", ?right, \"'\"), " +
             "            STR(?right) " +
-            "        );  separator=\",\") AS ?rights) ?op ?constraint2 WHERE { \n"
+            "        );  separator=\",\") AS ?rights) ?op ?childConstraint ?childLeft ?childOp ?childRight WHERE { \n"
             + " ?policy odrl:permission ?permission . \n"
             + " ?permission odrl:action ?action .  \n"
             + " ?permission odrl:target ?target .\n"
@@ -83,9 +86,12 @@ public class OdrlLib {
             "    }\n"
             + " ?constraint odrl:operator ?op .\n"
             + " OPTIONAL { \n" +
-            "        ?constraint odrl:constraint ?constraint2 .\n" +
+            "        ?constraint odrl:constraint+ ?childConstraint .\n" +
+            "        ?childConstraint odrl:leftOperand ?childLeft ;\n" +
+            "    odrl:operator ?childOp ;\n" +
+            "    odrl:rightOperand ?childRight ." +
             "    }\n"
-            + "} GROUP BY ?action ?target ?constraint ?left ?op ?constraint2\n";
+            + "} GROUP BY ?action ?target ?constraint ?left ?op ?childConstraint ?childLeft ?childOp ?childRight\n";
 
     private static final String OR_PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
             + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
@@ -200,9 +206,10 @@ public class OdrlLib {
         Model model = toRDFModel(policy);
         model.write(System.out, "turtle");
         ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS2), model).execSelect();
+        Map<String, OrOperandFunction> orConstraints = Maps.newHashMap();
         while (rs.hasNext()) {
             QuerySolution qs = rs.next();
-            Permission permission = mapToPermission(model, qs);
+            Permission permission = mapToPermission(model, qs,orConstraints);
             if (permissions.contains(permission)) {
                 int oldIndex = permissions.indexOf(permission);
                 Permission permissionOld = permissions.remove(oldIndex);
@@ -224,21 +231,40 @@ public class OdrlLib {
         return model;
     }
 
-    private Permission mapToPermission(Model model, QuerySolution qs) throws OperandException, UnsupportedFunctionException, OperatorException, EvaluationException {
+    private Permission mapToPermission(Model model, QuerySolution qs, Map<String, OrOperandFunction> orConstraints) throws OperandException, UnsupportedFunctionException, OperatorException, EvaluationException {
         String target = qs.get("?target").toString();
         String actionStr = qs.get("?action").toString();
         RDFNode leftNode = qs.get("?left");
         RDFNode rightNode = qs.get("?rights");
         RDFNode opNode = qs.get("?op");
-        RDFNode constraint_chidren = qs.get("?constraint2");
+        RDFNode parentConstraint = qs.get("?constraint");
+        RDFNode childConstraint = qs.get("?childConstraint");
+        RDFNode childLeftNode = qs.get("?childLeft");
+        RDFNode childRightNode = qs.get("?childRight");
+        RDFNode childOpNode = qs.get("?childOp");
 
         Permission permission = new Permission(target);
         Action action = new Action(actionStr);
         if (opNode.toString().equals("http://www.w3.org/ns/odrl/2/or")) {
             // TODO: or constraint
             // 将constraint_chidren里的left和op和right提取出来，使用jena
-            List<RDFNode[]> constraints = constraints2(constraint_chidren);
-            System.out.println();
+            IOperand left = OperandFactory.createOperand(model, childLeftNode, functions);
+            IOperand right = OperandFactory.createOperand(model, childRightNode, functions);
+            OperandFunction operator = OperandFactory.createOperandFunction(model, childOpNode, functions);
+            operator.getArguments().add(left);
+            operator.getArguments().add(right);
+            OrOperandFunction operandFunction = new OrOperandFunction(shortenURI( model,  opNode.asResource().getURI()), new ArrayList<>(){
+                {
+                    add(operator);
+                }
+            }, false);
+            if (orConstraints.containsKey(parentConstraint.toString())){
+                orConstraints.get(parentConstraint.toString()).getOperands().add(operator);
+            }else {
+                Constraint constraint = new Constraint(operandFunction);
+                orConstraints.put(parentConstraint.toString(), operandFunction);
+                action.addConstraint(constraint);
+            }
         } else {
             IOperand left = OperandFactory.createOperand(model, leftNode, functions);
             IOperand right = OperandFactory.createOperand(model, rightNode, functions);
@@ -311,6 +337,7 @@ public class OdrlLib {
             register("odrl", new OdrlLt());
             register("odrl", new OdrlLteq());
             register("odrl", new OdrlIsAnyOf());
+            register("odrl", new OdrlOr());
             // Operands
             register("odrl", new DateTime());
             register("odrl", new Spatial());

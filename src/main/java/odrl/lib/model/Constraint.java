@@ -1,6 +1,7 @@
 package odrl.lib.model;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -32,6 +33,9 @@ public class Constraint {
 	}
 
 	private void validOperator(OperandFunction operatorNode) throws OperatorException {
+		if (Objects.equals(operatorNode.getFunction(), "odrl:or")){
+			return;
+		}
 		if(operatorNode.getArguments().size()!=2)
 			throw new OperatorException("Provided operator "+(this.operatorNode.getFunction())+" ");
 	}

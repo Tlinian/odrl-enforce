@@ -11,7 +11,10 @@
           "operator": "or",
           "constraint": [
             {
-              "leftOperand": "2",
+              "leftOperand": {
+                "@value": "31",
+                "@type": "xsd:string"
+              },
               "operator": "eq",
               "rightOperand": "3"
             },
@@ -19,7 +22,7 @@
               "leftOperand": "dateTime",
               "operator": "gt",
               "rightOperand": {
-                "@value": "2024-01-01T06:00:13.625668Z1",
+                "@value": "2024-01-01T06:00:13.625668Z",
                 "@type": "xsd:dateTime"
               }
             }
