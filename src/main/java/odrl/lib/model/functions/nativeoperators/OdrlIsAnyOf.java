@@ -29,8 +29,7 @@ public class OdrlIsAnyOf extends OdrlNative{
 	protected Boolean solveOperator(NodeValue v1, NodeValue v2, String opName, String op) throws RuntimeEvaluationException {
 		Boolean result = false;
 		try {
-			String v2Target = Arrays.stream(v2.getString().split(",")).map(s -> "\"" + s + "\"").collect(Collectors.joining(","));
-			String formattedQuery = QUERY.replace(QUERY_REPLACEMENT_1, v1.toString()).replace(QUERY_REPLACEMENT_2, "("+v2Target+")").replace(QUERY_REPLACEMENT_3, op);
+			String formattedQuery = QUERY.replace(QUERY_REPLACEMENT_1, v1.isString()? "'"+v1.asString()+"'" : v1.asString()).replace(QUERY_REPLACEMENT_2, "("+v2.asString()+")").replace(QUERY_REPLACEMENT_3, op);
 			ByteArrayOutputStream out = Sparql.queryModel(formattedQuery, ModelFactory.createDefaultModel(), ResultsFormat.FMT_RS_CSV, null);
 			String rawString = new String(out.toByteArray());
 			String rawBoolean = rawString.split("\n")[1].trim();

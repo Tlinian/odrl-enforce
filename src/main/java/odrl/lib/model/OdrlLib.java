@@ -32,375 +32,388 @@ import odrl.lib.model.nodes.OperandFunction;
 
 public class OdrlLib {
 
-	// private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
-	private static final String PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-			"SELECT ?action ?target ?left ?right ?op WHERE { \n"
-			+ " ?policy odrl:permission ?permission . \n"
-			+ " ?permission odrl:action ?action .  \n"
-			+ " ?permission odrl:target ?target .\n"
-			+ " ?permission odrl:constraint ?constraint .\n"
-			+ " ?constraint odrl:leftOperand ?left .\n"
-			+ " ?constraint odrl:rightOperand ?right .\n"
-			+ " ?constraint odrl:operator ?op .\n"
-			+ "} \n";
-	private static final String QUERY_REPLACEMENT = "#RULE_ID#";
+    // private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
+    private static final String PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+            + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+            "SELECT ?action ?target ?left ?right ?op WHERE { \n"
+            + " ?policy odrl:permission ?permission . \n"
+            + " ?permission odrl:action ?action .  \n"
+            + " ?permission odrl:target ?target .\n"
+            + " ?permission odrl:constraint ?constraint .\n"
+            + " ?constraint odrl:leftOperand ?left .\n"
+            + " ?constraint odrl:rightOperand ?right .\n"
+            + " ?constraint odrl:operator ?op .\n"
+            + "} \n";
+    private static final String QUERY_REPLACEMENT = "#RULE_ID#";
 
-	private static final String CONSTRAINTS_QUERY_STRING = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-			"SELECT ?operator ?left_operand ?right_operand " +
-			"WHERE { <#RULE_ID#> odrl:operator ?operator;  " +
-			" odrl:leftOperand ?left_operand;  " +
-			" odrl:rightOperand ?right_operand . }";
-	private static final String RESTRICTIONS_QUERY_ARG_OPERATOR = "operator";
-	private static final String RESTRICTIONS_QUERY_ARG_LEFTOPERAND = "left_operand";
-	private static final String RESTRICTIONS_QUERY_ARG_RIGHTOPERAND = "right_operand";
+    private static final String CONSTRAINTS_QUERY_STRING = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+            + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+            "SELECT ?operator ?left_operand ?right_operand " +
+            "WHERE { <#RULE_ID#> odrl:operator ?operator;  " +
+            " odrl:leftOperand ?left_operand;  " +
+            " odrl:rightOperand ?right_operand . }";
+    private static final String RESTRICTIONS_QUERY_ARG_OPERATOR = "operator";
+    private static final String RESTRICTIONS_QUERY_ARG_LEFTOPERAND = "left_operand";
+    private static final String RESTRICTIONS_QUERY_ARG_RIGHTOPERAND = "right_operand";
 
-	// private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
-	private static final String PERMISSIONS2 = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-			"SELECT ?action ?target ?left ?right ?op ?constraint2 WHERE { \n"
-			+ " ?policy odrl:permission ?permission . \n"
-			+ " ?permission odrl:action ?action .  \n"
-			+ " ?permission odrl:target ?target .\n"
-			+ " ?permission odrl:constraint ?constraint .\n"
-			+ " OPTIONAL { \n" +
-			"        ?constraint odrl:leftOperand ?left .\n" +
-			"        ?constraint odrl:rightOperand ?right .\n" +
-			"    }\n"
-			+ " ?constraint odrl:operator ?op .\n"
-			+ " OPTIONAL { \n" +
-			"        ?constraint odrl:constraint ?constraint2 .\n" +
-			"    }\n"
-			+ "} \n";
+    // private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
+    private static final String PERMISSIONS2 = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+            + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+            "SELECT ?action ?target ?constraint ?left (GROUP_CONCAT( " +
+            "IF(\n" +
+            "            ?isString, \n" +
+            "            CONCAT(\"'\", ?right, \"'\"), " +
+            "            STR(?right) " +
+            "        );  separator=\",\") AS ?rights) ?op ?constraint2 WHERE { \n"
+            + " ?policy odrl:permission ?permission . \n"
+            + " ?permission odrl:action ?action .  \n"
+            + " ?permission odrl:target ?target .\n"
+            + " ?permission odrl:constraint ?constraint .\n"
+            + " OPTIONAL { \n" +
+            "        ?constraint odrl:leftOperand ?left .\n" +
+            "        ?constraint odrl:rightOperand ?right .\n" +
+            " BIND(\n" +
+            "            IF( \n" +
+            "                DATATYPE(?right) = xsd:string || \n" +
+            "                (!isURI(?right) && DATATYPE(?right) = 'null'), \n" +
+            "                true, \n" +
+            "                false \n" +
+            "            ) AS ?isString\n" +
+            "        )" +
+            "    }\n"
+            + " ?constraint odrl:operator ?op .\n"
+            + " OPTIONAL { \n" +
+            "        ?constraint odrl:constraint ?constraint2 .\n" +
+            "    }\n"
+            + "} GROUP BY ?action ?target ?constraint ?left ?op ?constraint2\n";
 
-	private static final String OR_PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-			+ "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-			"SELECT ?action ?target ?left ?right ?op WHERE { \n"
-			+ " ?policy odrl:permission ?permission . \n"
-			+ " ?permission odrl:action ?action .  \n"
-			+ " ?permission odrl:target ?target .\n"
-			+ " ?permission odrl:constraint ?constraint .\n"
-			+ " ?constraint odrl:constraint ?constraint_chidren .\n"
-			+ " ?constraint odrl:operator ?op .\n"
-			+ "} \n";
+    private static final String OR_PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+            + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+            "SELECT ?action ?target ?left ?right ?op WHERE { \n"
+            + " ?policy odrl:permission ?permission . \n"
+            + " ?permission odrl:action ?action .  \n"
+            + " ?permission odrl:target ?target .\n"
+            + " ?permission odrl:constraint ?constraint .\n"
+            + " ?constraint odrl:constraint ?constraint_chidren .\n"
+            + " ?constraint odrl:operator ?op .\n"
+            + "} \n";
 
-	String queryStr =
-			"PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n" +
-					"PREFIX dct: <http://purl.org/dc/terms/>\n" +
-					"SELECT ?target (GROUP_CONCAT(DISTINCT ?action; separator=', ') AS ?actions) " +
-					"(GROUP_CONCAT(CONCAT(?leftOp, ' ', ?op, ' ', STR(?rightOp), ' (', COALESCE(?comment, ''), ')'); separator='; ') AS ?constraints)\n" +
-					"WHERE {\n" +
-					"  ?set a odrl:Set ;\n" +
-					"       odrl:permission ?permission .\n" +
-					"  ?permission odrl:target ?target .\n" +
-					"  OPTIONAL { ?permission odrl:action ?action . }\n" +
-					"  OPTIONAL {\n" +
-					"    ?permission odrl:constraint ?constraint .\n" +
-					"    ?constraint odrl:leftOperand ?leftOp ;\n" +
-					"                odrl:operator ?op ;\n" +
-					"                odrl:rightOperand ?rightOp .\n" +
-					"    OPTIONAL { ?constraint dct:comment ?comment . }\n" +
-					"  }\n" +
-					"} GROUP BY ?target";
+    String queryStr =
+            "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n" +
+                    "PREFIX dct: <http://purl.org/dc/terms/>\n" +
+                    "SELECT ?target (GROUP_CONCAT(DISTINCT ?action; separator=', ') AS ?actions) " +
+                    "(GROUP_CONCAT(CONCAT(?leftOp, ' ', ?op, ' ', STR(?rightOp), ' (', COALESCE(?comment, ''), ')'); separator='; ') AS ?constraints)\n" +
+                    "WHERE {\n" +
+                    "  ?set a odrl:Set ;\n" +
+                    "       odrl:permission ?permission .\n" +
+                    "  ?permission odrl:target ?target .\n" +
+                    "  OPTIONAL { ?permission odrl:action ?action . }\n" +
+                    "  OPTIONAL {\n" +
+                    "    ?permission odrl:constraint ?constraint .\n" +
+                    "    ?constraint odrl:leftOperand ?leftOp ;\n" +
+                    "                odrl:operator ?op ;\n" +
+                    "                odrl:rightOperand ?rightOp .\n" +
+                    "    OPTIONAL { ?constraint dct:comment ?comment . }\n" +
+                    "  }\n" +
+                    "} GROUP BY ?target";
 
-	protected static boolean debug = false;
+    protected static boolean debug = false;
 
-	private Map<String, String> prefixes = Maps.newHashMap();
-	private List<String> functions = Lists.newArrayList();
-	public static FreemarkerEngine engine = new FreemarkerEngine();
+    private Map<String, String> prefixes = Maps.newHashMap();
+    private List<String> functions = Lists.newArrayList();
+    public static FreemarkerEngine engine = new FreemarkerEngine();
 
-	public OdrlLib() {
-		registerNative();
-	}
+    public OdrlLib() {
+        registerNative();
+    }
 
-	public void registerPrefix(String prefix, String uri) {
-		this.prefixes.put(prefix, uri);
-	}
+    public void registerPrefix(String prefix, String uri) {
+        this.prefixes.put(prefix, uri);
+    }
 
-	public Map<String, String> getPrefixes() {
-		return prefixes;
-	}
+    public Map<String, String> getPrefixes() {
+        return prefixes;
+    }
 
-	public List<String> getFunctions() {
-		return functions;
-	}
+    public List<String> getFunctions() {
+        return functions;
+    }
 
-	public void register(String prefix, IFunction function) throws OdrlRegistrationException {
-		if (!prefixes.containsKey(prefix))
-			throw new OdrlRegistrationException("Provided prefix (" + prefix
-					+ ") does not exist, register first a URI with that prefix using addPrefix method.");
-		String uri = prefixes.get(prefix);
-		FunctionRegistry.get().put(uri + function.getName(), function.getClass());
-		functions.add(prefix + ":" + function.getName());
-	}
+    public void register(String prefix, IFunction function) throws OdrlRegistrationException {
+        if (!prefixes.containsKey(prefix))
+            throw new OdrlRegistrationException("Provided prefix (" + prefix
+                    + ") does not exist, register first a URI with that prefix using addPrefix method.");
+        String uri = prefixes.get(prefix);
+        FunctionRegistry.get().put(uri + function.getName(), function.getClass());
+        functions.add(prefix + ":" + function.getName());
+    }
 
-	public void register(String sparqlFunction) throws OdrlRegistrationException {
-		if(!sparqlFunction.contains(":"))
-			throw new OdrlRegistrationException("Provided function must be prefixed, provide a valid function name that follows the convention [prefix]:[name]");
-		String[] splitted = sparqlFunction.split(":");
-		if (!prefixes.containsKey(splitted[0]))
-			throw new OdrlRegistrationException("Provided prefix (" + splitted[0]+ ") does not exist, register first a URI with that prefix using addPrefix method.");
+    public void register(String sparqlFunction) throws OdrlRegistrationException {
+        if (!sparqlFunction.contains(":"))
+            throw new OdrlRegistrationException("Provided function must be prefixed, provide a valid function name that follows the convention [prefix]:[name]");
+        String[] splitted = sparqlFunction.split(":");
+        if (!prefixes.containsKey(splitted[0]))
+            throw new OdrlRegistrationException("Provided prefix (" + splitted[0] + ") does not exist, register first a URI with that prefix using addPrefix method.");
 
-		functions.add(sparqlFunction);
-	}
+        functions.add(sparqlFunction);
+    }
 
-	public Map<String, List<String>> solve(JsonObject policyJson)
-			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
-		Map<String, List<String>> allowedTo = Maps.newHashMap();
-		List<Permission> permissions = mapToPermissions(policyJson);
-		for (Permission permission : permissions) {
-			List<String> actions = permission.solve(this.prefixes);
-			if (!actions.isEmpty())
-				allowedTo.put(permission.getTarget(), actions);
-		}
-		return allowedTo;
-	}
+    public Map<String, List<String>> solve(JsonObject policyJson)
+            throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+        Map<String, List<String>> allowedTo = Maps.newHashMap();
+        List<Permission> permissions = mapToPermissions(policyJson);
+        for (Permission permission : permissions) {
+            List<String> actions = permission.solve(this.prefixes);
+            if (!actions.isEmpty())
+                allowedTo.put(permission.getTarget(), actions);
+        }
+        return allowedTo;
+    }
 
-	public EnforcePolicyResult solveResult(JsonObject policyJson)
-			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
-		EnforcePolicyResult allowedTo = new EnforcePolicyResult();
-		List<Permission> permissions = mapToPermissions(policyJson);
-		for (Permission permission : permissions) {
-			ActionResult actions = permission.solveResult(this.prefixes);
-			allowedTo.getActionResults().add(actions);
-		}
-		return allowedTo;
-	}
+    public EnforcePolicyResult solveResult(JsonObject policyJson)
+            throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+        EnforcePolicyResult allowedTo = new EnforcePolicyResult();
+        List<Permission> permissions = mapToPermissions(policyJson);
+        for (Permission permission : permissions) {
+            ActionResult actions = permission.solveResult(this.prefixes);
+            allowedTo.getActionResults().add(actions);
+        }
+        return allowedTo;
+    }
 
-	public EnforcePolicyResult solveResult(String policy, Map<String, Object> interpolation)
-			throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
-		policy = engine.reduce(policy, interpolation, interpolation);
-		JsonObject policyJson = Policies.fromJsonld11String(policy);
-		EnforcePolicyResult allowedTo = new EnforcePolicyResult();
-		List<Permission> permissions = mapToPermissions(policyJson);
-		for (Permission permission : permissions) {
-			ActionResult actions = permission.solveResult(this.prefixes);
-			allowedTo.getActionResults().add(actions);
-		}
-		return allowedTo;
-	}
-
-
-	public List<Permission> mapToPermissions(JsonObject policy) throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
-		List<Permission> permissions = Lists.newArrayList();
-		Model model = toRDFModel( policy);
-		model.write(System.out,"turtle");
-		ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS2), model).execSelect();
-		while (rs.hasNext()) {
-			QuerySolution qs = rs.next();
-			Permission permission = mapToPermission(model, qs);
-			if (permissions.contains(permission)) {
-				int oldIndex = permissions.indexOf(permission);
-				Permission permissionOld = permissions.remove(oldIndex);
-				permissionOld.getActions().forEach(actionOld -> permission.addAction(actionOld));
-			}
-
-			permissions.add(permission);
-		}
-		if(permissions.isEmpty())
-			throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed permissions");
-		return permissions;
-	}
+    public EnforcePolicyResult solveResult(String policy, Map<String, Object> interpolation)
+            throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+        policy = engine.reduce(policy, interpolation, interpolation);
+        JsonObject policyJson = Policies.fromJsonld11String(policy);
+        EnforcePolicyResult allowedTo = new EnforcePolicyResult();
+        List<Permission> permissions = mapToPermissions(policyJson);
+        for (Permission permission : permissions) {
+            ActionResult actions = permission.solveResult(this.prefixes);
+            allowedTo.getActionResults().add(actions);
+        }
+        return allowedTo;
+    }
 
 
-	private Model toRDFModel(JsonObject policy) {
-		Model model = ModelFactory.createDefaultModel();
-		model.setNsPrefixes(prefixes);
-		model.read(new ByteArrayInputStream(policy.toString().getBytes()), null, "JSONLD11");
-		return model;
-	}
+    public List<Permission> mapToPermissions(JsonObject policy) throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {
+        List<Permission> permissions = Lists.newArrayList();
+        Model model = toRDFModel(policy);
+        model.write(System.out, "turtle");
+        ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS2), model).execSelect();
+        while (rs.hasNext()) {
+            QuerySolution qs = rs.next();
+            Permission permission = mapToPermission(model, qs);
+            if (permissions.contains(permission)) {
+                int oldIndex = permissions.indexOf(permission);
+                Permission permissionOld = permissions.remove(oldIndex);
+                permissionOld.getActions().forEach(actionOld -> permission.addAction(actionOld));
+            }
 
-	private Permission mapToPermission(Model model, QuerySolution qs) throws OperandException, UnsupportedFunctionException, OperatorException, EvaluationException {
-		String target = qs.get("?target").toString();
-		String actionStr = qs.get("?action").toString();
-		RDFNode leftNode = qs.get("?left");
-		RDFNode rightNode = qs.get("?right");
-		RDFNode opNode = qs.get("?op");
-		RDFNode constraint_chidren = qs.get("?constraint2");
-
-		Permission permission = new Permission(target);
-		Action action = new Action(actionStr);
-		if (opNode.toString().equals("http://www.w3.org/ns/odrl/2/or")){
-			// TODO: or constraint
-			// 将constraint_chidren里的left和op和right提取出来，使用jena
-			List<RDFNode[]> constraints = constraints2( constraint_chidren);
-			System.out.println();
-		}else {
-			IOperand left = OperandFactory.createOperand(model, leftNode, functions);
-			IOperand right = OperandFactory.createOperand(model, rightNode, functions);
-			OperandFunction operator = OperandFactory.createOperandFunction(model, opNode, functions);
-			operator.getArguments().add(left);
-			operator.getArguments().add(right);
-			Constraint constraint = new Constraint(operator);
-			action.addConstraint(constraint);
-		}
-		permission.addAction(action);
-		return permission;
-	}
-
-	public static List<RDFNode[]> constraints2(RDFNode restriction) throws EvaluationException {
-		List<RDFNode[]> restrictions = new ArrayList<>();
-		StmtIterator stmtIterator = ((ResourceImpl) restriction).listProperties();
-		while (stmtIterator.hasNext()){
-			Statement next = stmtIterator.next();
-			RDFNode object = next.getObject();
-			System.out.println(object);
-			restrictions.add(new RDFNode[]{object});
-		}
-		return restrictions;
-	}
+            permissions.add(permission);
+        }
+        if (permissions.isEmpty())
+            throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed permissions");
+        return permissions;
+    }
 
 
-	public static List<RDFNode[]> constraints(Model model, RDFNode restriction) throws EvaluationException {
-		List<RDFNode[]> restrictions = new ArrayList<>();
-		// Instantiate CONSTRAINTS QUEY
-		// 查询出restriction里的RDFNode节点
-		if(!restriction.isResource())
-			throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
-		String constraintsQueryInstantiated = CONSTRAINTS_QUERY_STRING.replace(QUERY_REPLACEMENT, restriction.asResource().toString());
+    private Model toRDFModel(JsonObject policy) {
+        Model model = ModelFactory.createDefaultModel();
+        model.setNsPrefixes(prefixes);
+        model.read(new ByteArrayInputStream(policy.toString().getBytes()), null, "JSONLD11");
+        return model;
+    }
 
-		Query constraintsQuery = QueryFactory.create(constraintsQueryInstantiated);
-		QueryExecution qe = QueryExecutionFactory.create(constraintsQuery, model);
-		ResultSet rs = qe.execSelect();
-		// Gather constraints
-		while(rs.hasNext()){
-			QuerySolution querySolution = rs.nextSolution();
-			RDFNode operator = querySolution.get(RESTRICTIONS_QUERY_ARG_OPERATOR);
-			RDFNode leftOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_LEFTOPERAND);
-			RDFNode rightOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_RIGHTOPERAND);
+    private Permission mapToPermission(Model model, QuerySolution qs) throws OperandException, UnsupportedFunctionException, OperatorException, EvaluationException {
+        String target = qs.get("?target").toString();
+        String actionStr = qs.get("?action").toString();
+        RDFNode leftNode = qs.get("?left");
+        RDFNode rightNode = qs.get("?rights");
+        RDFNode opNode = qs.get("?op");
+        RDFNode constraint_chidren = qs.get("?constraint2");
 
-			restrictions.add(new RDFNode[]{operator, leftOperand, rightOperand});
-		}
-		qe.close();
-		if(restrictions.isEmpty())
-			throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
-		return restrictions;
-	}
+        Permission permission = new Permission(target);
+        Action action = new Action(actionStr);
+        if (opNode.toString().equals("http://www.w3.org/ns/odrl/2/or")) {
+            // TODO: or constraint
+            // 将constraint_chidren里的left和op和right提取出来，使用jena
+            List<RDFNode[]> constraints = constraints2(constraint_chidren);
+            System.out.println();
+        } else {
+            IOperand left = OperandFactory.createOperand(model, leftNode, functions);
+            IOperand right = OperandFactory.createOperand(model, rightNode, functions);
+            OperandFunction operator = OperandFactory.createOperandFunction(model, opNode, functions);
+            operator.getArguments().add(left);
+            operator.getArguments().add(right);
+            Constraint constraint = new Constraint(operator);
+            action.addConstraint(constraint);
+        }
+        permission.addAction(action);
+        return permission;
+    }
 
-	public static boolean isDebug() {
-		return debug;
-	}
+    public static List<RDFNode[]> constraints2(RDFNode restriction) throws EvaluationException {
+        List<RDFNode[]> restrictions = new ArrayList<>();
+        StmtIterator stmtIterator = ((ResourceImpl) restriction).listProperties();
+        while (stmtIterator.hasNext()) {
+            Statement next = stmtIterator.next();
+            RDFNode object = next.getObject();
+            System.out.println(object);
+            restrictions.add(new RDFNode[]{object});
+        }
+        return restrictions;
+    }
 
-	public static void setDebug(boolean debug) {
-		OdrlLib.debug = debug;
-	}
 
-	public void registerNative() {
-		registerPrefix("odrl", "http://www.w3.org/ns/odrl/2/");
-		try {
-			// Operators
-			register("odrl", new OdrlEq());
-			register("odrl", new OdrlNeq());
-			register("odrl", new OdrlIn());
-			register("odrl", new OdrlGt());
-			register("odrl", new OdrlGteq());
-			register("odrl", new OdrlLt());
-			register("odrl", new OdrlLteq());
-			register("odrl", new OdrlIsAnyOf());
-			// Operands
-			register("odrl", new DateTime());
-			register("odrl", new Spatial());
-		} catch (Exception e) {
-			// skip
-		}
-	}
+    public static List<RDFNode[]> constraints(Model model, RDFNode restriction) throws EvaluationException {
+        List<RDFNode[]> restrictions = new ArrayList<>();
+        // Instantiate CONSTRAINTS QUEY
+        // 查询出restriction里的RDFNode节点
+        if (!restriction.isResource())
+            throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
+        String constraintsQueryInstantiated = CONSTRAINTS_QUERY_STRING.replace(QUERY_REPLACEMENT, restriction.asResource().toString());
 
-	public void registerGeof() {
-		registerPrefix("geof", OdrlLib.GEOF);
-		try {
-			register("geof:sfContains");
-			register("geof:boundary");
-			register("geof:buffer");
-			register("geof:ehContains");
-			register("geof:sfContains");
-			register("geof:convexHull");
-			register("geof:ehCoveredBy");
-			register("geof:ehCovers");
-			register("geof:sfCrosses");
-			register("geof:difference");
-			register("geof:rcc8dc");
-			register("geof:ehDisjoint");
-			register("geof:sfDisjoint");
-			register("geof:distance");
-			register("geof:envelope");
-			register("geof:ehEquals");
-			register("geof:rcc8eq");
-			register("geof:sfEquals");
-			register("geof:rcc8ec");
-			register("geof:getSRID");
-			register("geof:ehInside");
-			register("geof:intersection");
-			register("geof:sfIntersects");
-			register("geof:ehMeet");
-			register("geof:rcc8ntpp");
-			register("geof:rcc8ntppi");
-			register("geof:ehOverlap");
-			register("geof:sfOverlaps");
-			register("geof:rcc8po");
-			register("geof:relate");
-			register("geof:symDifference");
-			register("geof:rcc8tpp");
-			register("geof:rcc8tppi");
-			register("geof:sfTouches");
-			register("geof:union");
-			register("geof:sfWithin");
-			register("geof:asGeoJSON");
-		} catch (Exception e) {
+        Query constraintsQuery = QueryFactory.create(constraintsQueryInstantiated);
+        QueryExecution qe = QueryExecutionFactory.create(constraintsQuery, model);
+        ResultSet rs = qe.execSelect();
+        // Gather constraints
+        while (rs.hasNext()) {
+            QuerySolution querySolution = rs.nextSolution();
+            RDFNode operator = querySolution.get(RESTRICTIONS_QUERY_ARG_OPERATOR);
+            RDFNode leftOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_LEFTOPERAND);
+            RDFNode rightOperand = querySolution.get(RESTRICTIONS_QUERY_ARG_RIGHTOPERAND);
 
-		}
-	}
+            restrictions.add(new RDFNode[]{operator, leftOperand, rightOperand});
+        }
+        qe.close();
+        if (restrictions.isEmpty())
+            throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed constraints");
+        return restrictions;
+    }
 
-	protected static final String GEOF = "http://www.opengis.net/def/function/geosparql/";
-	protected static final String SPATIALF = "http://jena.apache.org/function/spatial#";
-	protected static final String SPATIAL = "http://jena.apache.org/spatial#";
-	protected static final String UNITS = "http://www.opengis.net/def/uom/OGC/1.0/";
-	protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
+    public static boolean isDebug() {
+        return debug;
+    }
+
+    public static void setDebug(boolean debug) {
+        OdrlLib.debug = debug;
+    }
+
+    public void registerNative() {
+        registerPrefix("odrl", "http://www.w3.org/ns/odrl/2/");
+        try {
+            // Operators
+            register("odrl", new OdrlEq());
+            register("odrl", new OdrlNeq());
+            register("odrl", new OdrlIn());
+            register("odrl", new OdrlGt());
+            register("odrl", new OdrlGteq());
+            register("odrl", new OdrlLt());
+            register("odrl", new OdrlLteq());
+            register("odrl", new OdrlIsAnyOf());
+            // Operands
+            register("odrl", new DateTime());
+            register("odrl", new Spatial());
+        } catch (Exception e) {
+            // skip
+        }
+    }
+
+    public void registerGeof() {
+        registerPrefix("geof", OdrlLib.GEOF);
+        try {
+            register("geof:sfContains");
+            register("geof:boundary");
+            register("geof:buffer");
+            register("geof:ehContains");
+            register("geof:sfContains");
+            register("geof:convexHull");
+            register("geof:ehCoveredBy");
+            register("geof:ehCovers");
+            register("geof:sfCrosses");
+            register("geof:difference");
+            register("geof:rcc8dc");
+            register("geof:ehDisjoint");
+            register("geof:sfDisjoint");
+            register("geof:distance");
+            register("geof:envelope");
+            register("geof:ehEquals");
+            register("geof:rcc8eq");
+            register("geof:sfEquals");
+            register("geof:rcc8ec");
+            register("geof:getSRID");
+            register("geof:ehInside");
+            register("geof:intersection");
+            register("geof:sfIntersects");
+            register("geof:ehMeet");
+            register("geof:rcc8ntpp");
+            register("geof:rcc8ntppi");
+            register("geof:ehOverlap");
+            register("geof:sfOverlaps");
+            register("geof:rcc8po");
+            register("geof:relate");
+            register("geof:symDifference");
+            register("geof:rcc8tpp");
+            register("geof:rcc8tppi");
+            register("geof:sfTouches");
+            register("geof:union");
+            register("geof:sfWithin");
+            register("geof:asGeoJSON");
+        } catch (Exception e) {
+
+        }
+    }
+
+    protected static final String GEOF = "http://www.opengis.net/def/function/geosparql/";
+    protected static final String SPATIALF = "http://jena.apache.org/function/spatial#";
+    protected static final String SPATIAL = "http://jena.apache.org/spatial#";
+    protected static final String UNITS = "http://www.opengis.net/def/uom/OGC/1.0/";
+    protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
 //	protected static final String xsd = "http://www.w3.org/2001/XMLSchema#";
 
-	public void registerSpatial() {
-		registerPrefix("spatialF", SPATIALF);
-		registerPrefix("spatial", SPATIAL);
-		registerPrefix("units", UNITS);
-		registerPrefix("xsd", xsd);
-		registerPrefix("geosp", "http://www.opengis.net/ont/geosparql#");
-		try {
-			register("spatialF:convertLatLon");
-			register("spatialF:convertLatLonBox");
-			register("spatialF:equals");
-			register("spatialF:nearby");
-			register("spatialF:withinCircle");
-			register("spatialF:angle");
-			register("spatialF:angleDeg");
-			register("spatialF:distance");
-			register("spatialF:azimuth");
-			register("spatialF:azimuthDeg");
-			register("spatialF:greatCircle");
-			register("spatialF:greatCircleGeom");
-			register("spatialF:transform");
-			register("spatialF:transformDatatype");
-			register("spatialF:transformSRS");
+    public void registerSpatial() {
+        registerPrefix("spatialF", SPATIALF);
+        registerPrefix("spatial", SPATIAL);
+        registerPrefix("units", UNITS);
+        registerPrefix("xsd", xsd);
+        registerPrefix("geosp", "http://www.opengis.net/ont/geosparql#");
+        try {
+            register("spatialF:convertLatLon");
+            register("spatialF:convertLatLonBox");
+            register("spatialF:equals");
+            register("spatialF:nearby");
+            register("spatialF:withinCircle");
+            register("spatialF:angle");
+            register("spatialF:angleDeg");
+            register("spatialF:distance");
+            register("spatialF:azimuth");
+            register("spatialF:azimuthDeg");
+            register("spatialF:greatCircle");
+            register("spatialF:greatCircleGeom");
+            register("spatialF:transform");
+            register("spatialF:transformDatatype");
+            register("spatialF:transformSRS");
 
-			register("spatial:intersectBox");
-			register("spatial:intersectBoxGeom");
-			register("spatial:withinBox");
-			register("spatial:withinBoxGeom");
-			register("spatial:nearby");
-			register("spatial:nearbyGeom");
-			register("spatial:withinCircle");
-			register("spatial:withinCircleGeom");
-			register("spatial:north");
-			register("spatial:northGeom");
-			register("spatial:south");
-			register("spatial:southGeom");
-			register("spatial:east");
-			register("spatial:eastGeom");
-			register("spatial:west");
-			register("spatial:westGeom");
+            register("spatial:intersectBox");
+            register("spatial:intersectBoxGeom");
+            register("spatial:withinBox");
+            register("spatial:withinBoxGeom");
+            register("spatial:nearby");
+            register("spatial:nearbyGeom");
+            register("spatial:withinCircle");
+            register("spatial:withinCircleGeom");
+            register("spatial:north");
+            register("spatial:northGeom");
+            register("spatial:south");
+            register("spatial:southGeom");
+            register("spatial:east");
+            register("spatial:eastGeom");
+            register("spatial:west");
+            register("spatial:westGeom");
 
-		} catch (Exception e) {
+        } catch (Exception e) {
 
-		}
-	}
+        }
+    }
 
 }
