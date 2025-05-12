@@ -6,13 +6,14 @@ public class OdrlLteq  extends OdrlNative{
 
 	@Override
 	public String getName() {
-		return "lte";
+		return "lteq";
 	}
 
 
 	@Override
 	public NodeValue exec(NodeValue v1, NodeValue v2) {
-		Boolean result = solveOperator(v1, v2, getName(), " <= ");
+		int compare = NodeValue.compare(v1, v2);
+		boolean result = compare <= 0;
 		return NodeValue.makeNodeBoolean(result);
 	}
 

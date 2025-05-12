@@ -1,0 +1,48 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Policy",
+  "uid": "https://upm.es/policy/6",
+  "permission": [{
+    "target": "https://jsonplaceholder.typicode.com/users/1",
+    "action": ["read", "process", "download"],
+    "constraint": [{
+      "leftOperand": "odrl:dateTime",
+      "operator": "gt",
+      "rightOperand":  { "@value": "2022-01-01T06:00:13.625668Z", "@type": "xsd:dateTime" },
+      "dct:comment": "生效于至2022年初"
+    },{
+      "leftOperand": "dateTime",
+      "operator": "lt",
+      "rightOperand":  { "@value": "2025-12-30T06:00:13.625668Z", "@type": "xsd:dateTime" },
+      "dct:comment": "截止于至2025年底"
+    },{
+      "operator": "odrl:or",
+      "constraint": [
+        {
+          "leftOperand": {
+            "@value": "partyRoleTeam",
+            "@type": "xsd:string"
+          },
+          "operator": "eq",
+          "rightOperand": "teamA",
+          "dct:comment": "使用者必须属于teamA"
+        },
+        {
+          "leftOperand":  {
+            "@value": "dataReceiver",
+            "@type": "xsd:string"
+          },
+          "operator": "eq",
+          "rightOperand": "dataReceiver",
+          "dct:comment": "使用者必须是数据接收者角色"
+        }
+      ]
+    },
+      {
+        "leftOperand": { "@value": "6", "@type": "xsd:string" },
+        "operator": "lteq",
+        "rightOperand": "5",
+        "dct:comment": "使用者最多使用资源5次"
+      }]
+  }]
+}

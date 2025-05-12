@@ -29,7 +29,7 @@ public class TestExtensionParsing {
 	@Test
 	public void test01() throws Exception  {
 
-		String policy = Tests.readPolicy(dir.append("example-operand.json").toString());
+		String policy = Tests.readPolicy(dir.append("parsing-ex2.json").toString());
 		Map<String, List<String>> result = Tests.solvePolicy(policy);
 		System.out.println(result);
 		Assert.assertTrue(result.isEmpty());

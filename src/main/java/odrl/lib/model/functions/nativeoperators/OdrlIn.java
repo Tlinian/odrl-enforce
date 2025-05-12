@@ -15,6 +15,4 @@ public class OdrlIn extends OdrlNative{
 		Boolean result = solveOperator(v1, v2, getName(), " in ");
 		return NodeValue.makeNodeBoolean(result);
 	}
-
-
 }

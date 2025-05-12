@@ -38,7 +38,7 @@ public class TestExtensionParsing {
 	@Test
 	public void test01() throws Exception  {
 
-		String policy = Tests.readPolicy(dir.append("in-cons.json").toString());
+		String policy = Tests.readPolicy(dir.append("datetime-check.json").toString());
 //		Map<String, List<String>> result = Tests.solvePolicy(policy);
 //		System.out.println(result);
 //		Assert.assertTrue(result.isEmpty());
@@ -49,7 +49,7 @@ public class TestExtensionParsing {
 	@Test
 	public void test02() throws Exception  {
 
-		String policy = Tests.readPolicy(dir.append("or-cons.json").toString());
+		String policy = Tests.readPolicy(dir.append("datetime-check.json").toString());
 //		Map<String, List<String>> result = Tests.solvePolicy(policy);
 //		System.out.println(result);
 //		Assert.assertTrue(result.isEmpty());
@@ -57,7 +57,7 @@ public class TestExtensionParsing {
 		ODRLExtractor.extractConstraints(model);
 	}
 
-	private static Lang policySerialization = Lang.JSONLD11;
+	private static final Lang policySerialization = Lang.JSONLD11;
 
 	private static Model parsePolicy(String policy)  {
 		Model model = ModelFactory.createDefaultModel();
