@@ -9,6 +9,7 @@ public class OperandFunction implements IOperand {
 	private String function;
 	private List<IOperand> arguments;
 	private Boolean isStringFunction = false;
+	private String functionId;
 
 	public OperandFunction(String function)  {
 		super();
@@ -16,14 +17,17 @@ public class OperandFunction implements IOperand {
 		this.arguments = Lists.newArrayList();
 	}
 
-	public OperandFunction(String function, List<IOperand> arguments, boolean isStringFunction) {
+	public OperandFunction(String function, List<IOperand> arguments, boolean isStringFunction, String functionId) {
 		super();
 		this.function = function;
 		this.arguments = arguments;
 		this.isStringFunction = isStringFunction;
+		this.functionId = functionId;
 	}
 
-
+	public String getFunctionId() {
+		return functionId;
+	}
 
 	public List<IOperand> getArguments() {
 		return arguments;

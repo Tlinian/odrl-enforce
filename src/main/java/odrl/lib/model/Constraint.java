@@ -25,11 +25,17 @@ public class Constraint {
 	private static final Logger LOG = LoggerFactory.getLogger(Constraint.class);
 
 	private OperandFunction operatorNode;
+	private String constraintId;
 
-	public Constraint(OperandFunction operatorNode) throws OperatorException {
+	public Constraint(OperandFunction operatorNode,String constraintId) throws OperatorException {
 		super();
 		validOperator(operatorNode);
 		this.operatorNode = operatorNode;
+		this.constraintId = constraintId;
+	}
+
+	public String getConstraintId() {
+		return constraintId;
 	}
 
 	private void validOperator(OperandFunction operatorNode) throws OperatorException {
@@ -40,6 +46,9 @@ public class Constraint {
 			throw new OperatorException("Provided operator "+(this.operatorNode.getFunction())+" ");
 	}
 
+	public String getFunction() {
+		return operatorNode.getFunction();
+	}
 
 	public IOperand getLeftNode() {
 		return operatorNode.getArguments().get(0);
@@ -51,6 +60,10 @@ public class Constraint {
 
 	public IOperand getRightNode() {
 		return operatorNode.getArguments().get(1);
+	}
+
+	public OperandFunction getOperatorNode() {
+		return operatorNode;
 	}
 
 	public void setRightNode(IOperand rightNode) {

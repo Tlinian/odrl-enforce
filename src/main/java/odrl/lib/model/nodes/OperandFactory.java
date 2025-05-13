@@ -54,7 +54,11 @@ public class OperandFactory {
 		return createOperandFunction( model,  operand, functions, false);
 	}
 
-	public static OperandFunction createOperandFunction(Model model, RDFNode operand, List<String> functions, boolean isStringFunction) throws UnsupportedFunctionException, OperandException {
+	public static OperandFunction createOperandFunction(Model model, RDFNode operand, List<String> functions,String functionId) throws UnsupportedFunctionException, OperandException {
+		return createOperandFunction( model,  operand, functions, false,functionId);
+	}
+
+	public static OperandFunction createOperandFunction(Model model, RDFNode operand, List<String> functions, boolean isStringFunction,String functionId) throws UnsupportedFunctionException, OperandException {
 		String function = null;
 		List<IOperand> arguments = Lists.newArrayList();
 		if(!isStringFunction) {
@@ -67,8 +71,12 @@ public class OperandFactory {
 			function = operand.asLiteral().toString();
 		}
 
+		return  new OperandFunction(function, arguments, isStringFunction,functionId);
 
-		return  new OperandFunction(function, arguments, isStringFunction);
+	}
+
+	public static OperandFunction createOperandFunction(Model model, RDFNode operand, List<String> functions, boolean isStringFunction) throws UnsupportedFunctionException, OperandException {
+		return createOperandFunction( model,  operand, functions, isStringFunction,null);
 
 	}
 

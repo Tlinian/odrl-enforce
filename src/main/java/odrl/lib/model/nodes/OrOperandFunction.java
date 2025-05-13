@@ -8,17 +8,16 @@ public class OrOperandFunction extends OperandFunction {
 
 	private List<OperandFunction> operandFunctions;
 
+
 	public OrOperandFunction(String function)  {
 		super(function);
 		this.operandFunctions = Lists.newArrayList();
 	}
 
-	public OrOperandFunction(String function, List<OperandFunction> operandFunctions, boolean isStringFunction) {
-		super(function,null, isStringFunction);
+	public OrOperandFunction(String function, List<OperandFunction> operandFunctions, boolean isStringFunction, String functionId) {
+		super(function,null, isStringFunction, functionId);
 		this.operandFunctions = operandFunctions;
 	}
-
-
 
 	public List<OperandFunction> getOperands() {
 		return operandFunctions;

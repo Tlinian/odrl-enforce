@@ -2,25 +2,47 @@ package odrl.lib.model;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import odrl.lib.model.functions.Time;
-import odrl.lib.model.functions.nativeoperators.*;
+import odrl.lib.model.functions.nativeoperators.OdrlEq;
+import odrl.lib.model.functions.nativeoperators.OdrlGt;
+import odrl.lib.model.functions.nativeoperators.OdrlGteq;
+import odrl.lib.model.functions.nativeoperators.OdrlIn;
+import odrl.lib.model.functions.nativeoperators.OdrlIsAnyOf;
+import odrl.lib.model.functions.nativeoperators.OdrlLt;
+import odrl.lib.model.functions.nativeoperators.OdrlLteq;
+import odrl.lib.model.functions.nativeoperators.OdrlNeq;
+import odrl.lib.model.functions.nativeoperators.OdrlOr;
+import odrl.lib.model.nodes.IOperand;
+import odrl.lib.model.nodes.OperandFactory;
+import odrl.lib.model.nodes.OperandFunction;
+import odrl.lib.model.nodes.OperandValue;
 import odrl.lib.model.nodes.OrOperandFunction;
 import odrl.lib.model.result.ActionResult;
 import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.jena.ext.com.google.common.collect.Maps;
-import org.apache.jena.query.*;
-import org.apache.jena.rdf.model.*;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.QuerySolution;
+import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.rdf.model.impl.ResourceImpl;
 import org.apache.jena.sparql.function.FunctionRegistry;
-
 import com.google.gson.JsonObject;
-
 import odrl.lib.model.exceptions.EvaluationException;
 import odrl.lib.model.exceptions.OdrlRegistrationException;
 import odrl.lib.model.exceptions.OperandException;
@@ -29,26 +51,9 @@ import odrl.lib.model.exceptions.UnsupportedFunctionException;
 import odrl.lib.model.functions.DateTime;
 import odrl.lib.model.functions.IFunction;
 import odrl.lib.model.functions.Spatial;
-import odrl.lib.model.nodes.IOperand;
-import odrl.lib.model.nodes.OperandFactory;
-import odrl.lib.model.nodes.OperandFunction;
-
 import static odrl.lib.model.nodes.OperandFactory.shortenURI;
 
 public class OdrlLib {
-
-    // private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
-    private static final String PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
-            + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-            "SELECT ?action ?target ?left ?right ?op WHERE { \n"
-            + " ?policy odrl:permission ?permission . \n"
-            + " ?permission odrl:action ?action .  \n"
-            + " ?permission odrl:target ?target .\n"
-            + " ?permission odrl:constraint ?constraint .\n"
-            + " ?constraint odrl:leftOperand ?left .\n"
-            + " ?constraint odrl:rightOperand ?right .\n"
-            + " ?constraint odrl:operator ?op .\n"
-            + "} \n";
     private static final String QUERY_REPLACEMENT = "#RULE_ID#";
 
     private static final String CONSTRAINTS_QUERY_STRING = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
@@ -61,15 +66,9 @@ public class OdrlLib {
     private static final String RESTRICTIONS_QUERY_ARG_LEFTOPERAND = "left_operand";
     private static final String RESTRICTIONS_QUERY_ARG_RIGHTOPERAND = "right_operand";
 
-    // private static final Logger LOG = LoggerFactory.getLogger(OdrlLib.class);
-    private static final String PERMISSIONS2 = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+    private static final String PERMISSION_EXCLUDE_IN = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
             + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-            "SELECT ?action ?target ?constraint ?left (GROUP_CONCAT( " +
-            "IF(\n" +
-            "            ?isString, \n" +
-            "            CONCAT(\"'\", ?right, \"'\"), " +
-            "            STR(?right) " +
-            "        );  separator=\",\") AS ?rights) ?op ?childConstraint ?childLeft ?childOp ?childRight WHERE { \n"
+            "SELECT ?action ?target ?constraint ?left ?right ?op ?childConstraint ?childLeft ?childOp ?childRight WHERE { \n"
             + " ?policy odrl:permission ?permission . \n"
             + " ?permission odrl:action ?action .  \n"
             + " ?permission odrl:target ?target .\n"
@@ -77,14 +76,6 @@ public class OdrlLib {
             + " OPTIONAL { \n" +
             "        ?constraint odrl:leftOperand ?left .\n" +
             "        ?constraint odrl:rightOperand ?right .\n" +
-            " BIND(\n" +
-            "            IF( \n" +
-            "                DATATYPE(?right) = xsd:string || \n" +
-            "                (!isURI(?right) && DATATYPE(?right) = 'null'), \n" +
-            "                true, \n" +
-            "                false \n" +
-            "            ) AS ?isString\n" +
-            "        )" +
             "    }\n"
             + " ?constraint odrl:operator ?op .\n"
             + " OPTIONAL { \n" +
@@ -93,37 +84,41 @@ public class OdrlLib {
             "    odrl:operator ?childOp ;\n" +
             "    odrl:rightOperand ?childRight ." +
             "    }\n"
-            + "} GROUP BY ?action ?target ?constraint ?left ?op ?childConstraint ?childLeft ?childOp ?childRight\n";
+            + "}";
 
-    private static final String OR_PERMISSIONS = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
+    private static final String PERMISSION_INCLUDE_IN = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
             + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-            "SELECT ?action ?target ?left ?right ?op WHERE { \n"
+            "SELECT ?action ?target ?constraint ?left (GROUP_CONCAT( " +
+            "IF(\n" +
+            "            ?isString, \n" +
+            "            CONCAT(\"'\", ?right1, \"'\"), " +
+            "            STR(?right1) " +
+            "        );  separator=\",\") AS ?right) ?op ?childConstraint ?childLeft ?childOp ?childRight WHERE { \n"
             + " ?policy odrl:permission ?permission . \n"
             + " ?permission odrl:action ?action .  \n"
             + " ?permission odrl:target ?target .\n"
             + " ?permission odrl:constraint ?constraint .\n"
-            + " ?constraint odrl:constraint ?constraint_chidren .\n"
-            + " ?constraint odrl:operator ?op .\n"
-            + "} \n";
-
-    String queryStr =
-            "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n" +
-                    "PREFIX dct: <http://purl.org/dc/terms/>\n" +
-                    "SELECT ?target (GROUP_CONCAT(DISTINCT ?action; separator=', ') AS ?actions) " +
-                    "(GROUP_CONCAT(CONCAT(?leftOp, ' ', ?op, ' ', STR(?rightOp), ' (', COALESCE(?comment, ''), ')'); separator='; ') AS ?constraints)\n" +
-                    "WHERE {\n" +
-                    "  ?set a odrl:Set ;\n" +
-                    "       odrl:permission ?permission .\n" +
-                    "  ?permission odrl:target ?target .\n" +
-                    "  OPTIONAL { ?permission odrl:action ?action . }\n" +
-                    "  OPTIONAL {\n" +
-                    "    ?permission odrl:constraint ?constraint .\n" +
-                    "    ?constraint odrl:leftOperand ?leftOp ;\n" +
-                    "                odrl:operator ?op ;\n" +
-                    "                odrl:rightOperand ?rightOp .\n" +
-                    "    OPTIONAL { ?constraint dct:comment ?comment . }\n" +
-                    "  }\n" +
-                    "} GROUP BY ?target";
+            + " OPTIONAL { \n" +
+            "        ?constraint odrl:leftOperand ?left .\n" +
+            "        ?constraint odrl:rightOperand ?right1 .\n" +
+            " BIND(\n" +
+            "            IF( \n" +
+            "                DATATYPE(?right1) = xsd:string || \n" +
+            "                (!isURI(?right1) && DATATYPE(?right1) = 'null'), \n" +
+            "                true, \n" +
+            "                false \n" +
+            "            ) AS ?isString\n" +
+            "        )" +
+            "    }\n"
+            + " ?constraint odrl:operator ?op .\n" +
+            " FILTER (?op = odrl:isAnyOf) "
+            + " OPTIONAL { \n" +
+            "        ?constraint odrl:constraint+ ?childConstraint .\n" +
+            "        ?childConstraint odrl:leftOperand ?childLeft ;\n" +
+            "    odrl:operator ?childOp ;\n" +
+            "    odrl:rightOperand ?childRight ." +
+            "    }\n"
+            + "} GROUP BY ?action ?target ?constraint ?left ?op ?childConstraint ?childLeft ?childOp ?childRight\n";
 
     protected static boolean debug = false;
 
@@ -224,8 +219,127 @@ public class OdrlLib {
         List<Permission> permissions = Lists.newArrayList();
         Model model = toRDFModel(policy);
         model.write(System.out, "turtle");
-        ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSIONS2), model).execSelect();
+        ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSION_EXCLUDE_IN), model).execSelect();
         Map<String, OrOperandFunction> orConstraints = Maps.newHashMap();
+        AtomicReference<Boolean> isHasIn = new AtomicReference<>(false);
+        Set<Permission> inPermissions = new HashSet<>();
+        while (rs.hasNext()) {
+            QuerySolution qs = rs.next();
+            Permission permission = mapToPermission(model, qs, orConstraints);
+            if (permissions.contains(permission)) {
+                int oldIndex = permissions.indexOf(permission);
+                Permission permissionOld = permissions.remove(oldIndex);
+                permissionOld.getActions().forEach(permission::addAction);
+            }
+            permission.getActions().forEach(action -> {
+                if (action.getConstraints().isEmpty())
+                    return;
+                for (Constraint constraint : action.getConstraints()) {
+                    if (constraint.getFunction().equals("odrl:isAnyOf")){
+                        isHasIn.set(true);
+                        inPermissions.add(permission);
+                    }
+                }
+            });
+            permissions.add(permission);
+        }
+        if (isHasIn.get()) {
+            List<Permission> permissions1 = queryInConstraint(model);
+            Map<String,Constraint> constraintMap = new HashMap<>();
+            permissions1.forEach(permission -> {
+                permission.getActions().forEach(action -> {
+                    if (action.getConstraints().isEmpty())
+                        return;
+                    for (Constraint constraint : action.getConstraints()) {
+                        if (constraint.getFunction().equals("odrl:isAnyOf")){
+                            constraintMap.put(constraint.getConstraintId(),constraint);
+                        }
+                    }
+                });
+                    });
+            Map<String,Action> actionMap  = new HashMap<>();
+            permissions.forEach(permission -> {
+                for (Action action : permission.getActions()) {
+                    if (action.getConstraints().isEmpty())
+                        continue;
+                    for (Constraint constraint : new ArrayList<>(action.getConstraints())) {
+                        if (constraint.getFunction().equals("odrl:isAnyOf")) {
+                            actionMap.put(constraint.getConstraintId(), action);
+                            action.getConstraints().remove(constraint);
+                        }
+
+                    }
+                }
+            });
+            actionMap.entrySet().stream().forEach(entry -> {
+                Constraint constraint = constraintMap.get(entry.getKey());
+                entry.getValue().getConstraints().add(constraint);
+            });
+        }
+        if (permissions.isEmpty())
+            throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed permissions");
+        correctConstraints(permissions);
+        return permissions;
+    }
+
+    private void correctConstraints(List<Permission> permissions) throws UnsupportedFunctionException, OperandException, EvaluationException, OperatorException {
+        permissions.stream().forEach(permission -> {
+            permission.getActions().stream().forEach(action -> {
+                List<Constraint> constraints = action.getConstraints();
+                Map<String, Constraint> constraintsMap = Maps.newHashMap();
+
+                for (Constraint constraint : constraints) {
+                    Map<String, StringBuilder> rightNodes = Maps.newHashMap();
+                    Map<String, OperandFunction> operandFunctionMap = Maps.newHashMap();
+                    if (constraint.getFunction().equals("odrl:or")) {
+                        OrOperandFunction operatorNode = (OrOperandFunction) constraint.getOperatorNode();
+                        operatorNode.getOperands().forEach(operandFunction -> {
+                            if (operandFunction.getFunction().equals("odrl:isAnyOf")) {
+                                if (rightNodes.containsKey(operandFunction.getFunctionId())){
+                                    StringBuilder stringBuilder = rightNodes.get(operandFunction.getFunctionId());
+                                    stringBuilder.append(",").append(getValue(operandFunction));
+                                }else {
+                                    rightNodes.put(operandFunction.getFunctionId(),new StringBuilder(getValue(operandFunction)));
+                                }
+
+                            }
+                        });
+                        for (OperandFunction operandFunction : new ArrayList<>(operatorNode.getOperands())) {
+                            if (operandFunction.getFunction().equals("odrl:isAnyOf")) {
+                                operandFunctionMap.put(operandFunction.getFunctionId(), operandFunction);
+                                operatorNode.getOperands().remove(operandFunction);
+                            }
+                        }
+                        operandFunctionMap.forEach((key, value) -> {
+                            OperandValue iOperand = (OperandValue) value.getArguments().get(1);
+                            iOperand.setValue(rightNodes.get(key).toString());
+                            operatorNode.getOperands().add(value);
+                        });
+                    }
+                }
+            });
+        });
+    }
+
+    private String getValue(OperandFunction operandFunction) {
+        IOperand iOperand = operandFunction.getArguments().get(1);
+        if (iOperand instanceof OperandValue) {
+            OperandValue operandValue = (OperandValue) iOperand;
+            if (operandValue.getType().endsWith("string")) {
+                return "'"+operandValue.getValue()+"'";
+            } else {
+                return operandValue.getValue();
+           }
+        }
+        return null;
+    }
+
+    private List<Permission> queryInConstraint(Model model) throws UnsupportedFunctionException, OperandException, EvaluationException, OperatorException {
+        List<Permission> permissions = Lists.newArrayList();
+        ResultSet rs = QueryExecutionFactory.create(QueryFactory.create(PERMISSION_INCLUDE_IN), model).execSelect();
+        Map<String, OrOperandFunction> orConstraints = Maps.newHashMap();
+        AtomicReference<Boolean> isHasIn = new AtomicReference<>(false);
+        Set<Permission> inPermissions = new HashSet<>();
         while (rs.hasNext()) {
             QuerySolution qs = rs.next();
             Permission permission = mapToPermission(model, qs, orConstraints);
@@ -234,11 +348,19 @@ public class OdrlLib {
                 Permission permissionOld = permissions.remove(oldIndex);
                 permissionOld.getActions().forEach(actionOld -> permission.addAction(actionOld));
             }
-
+            permission.getActions().forEach(action -> {
+                if (action.getConstraints().isEmpty())
+                    return;
+                for (Constraint constraint : action.getConstraints()) {
+                    if (constraint.getFunction().equals("odrl:isAnyOf")){
+                        isHasIn.set(true);
+                        inPermissions.add(permission);
+                    }
+                }
+            });
             permissions.add(permission);
         }
-        if (permissions.isEmpty())
-            throw new EvaluationException("Provided policy seems to be malformed since it lacks of correly expressed permissions");
+
         return permissions;
     }
 
@@ -254,7 +376,7 @@ public class OdrlLib {
         String target = qs.get("?target").toString();
         String actionStr = qs.get("?action").toString();
         RDFNode leftNode = qs.get("?left");
-        RDFNode rightNode = qs.get("?rights");
+        RDFNode rightNode = qs.get("?right");
         RDFNode opNode = qs.get("?op");
         RDFNode parentConstraint = qs.get("?constraint");
         RDFNode childConstraint = qs.get("?childConstraint");
@@ -269,18 +391,18 @@ public class OdrlLib {
             // 将constraint_chidren里的left和op和right提取出来，使用jena
             IOperand left = OperandFactory.createOperand(model, childLeftNode, functions);
             IOperand right = OperandFactory.createOperand(model, childRightNode, functions);
-            OperandFunction operator = OperandFactory.createOperandFunction(model, childOpNode, functions);
+            OperandFunction operator = OperandFactory.createOperandFunction(model, childOpNode, functions,childConstraint.toString());
             operator.getArguments().add(left);
             operator.getArguments().add(right);
             OrOperandFunction operandFunction = new OrOperandFunction(shortenURI(model, opNode.asResource().getURI()), new ArrayList<>() {
                 {
                     add(operator);
                 }
-            }, false);
+            }, false, parentConstraint.toString());
             if (orConstraints.containsKey(parentConstraint.toString())) {
                 orConstraints.get(parentConstraint.toString()).getOperands().add(operator);
             } else {
-                Constraint constraint = new Constraint(operandFunction);
+                Constraint constraint = new Constraint(operandFunction,parentConstraint.toString());
                 orConstraints.put(parentConstraint.toString(), operandFunction);
                 action.addConstraint(constraint);
             }
@@ -290,7 +412,7 @@ public class OdrlLib {
             OperandFunction operator = OperandFactory.createOperandFunction(model, opNode, functions);
             operator.getArguments().add(left);
             operator.getArguments().add(right);
-            Constraint constraint = new Constraint(operator);
+            Constraint constraint = new Constraint(operator,parentConstraint.toString());
             action.addConstraint(constraint);
         }
         permission.addAction(action);
