@@ -184,15 +184,16 @@ public class OdrlLib {
         return allowedTo;
     }
 
-    public String solveResultToJson(String policy)
+    public String solveResultToJson(String policy, Map<String, Object> interpolation)
             throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException, OdrlRegistrationException, IllegalAccessException {
+        policy = engine.reduce(policy, interpolation, interpolation);
         JsonObject policyJson = Policies.fromJsonld11String(policy);
         OdrlLib odrl = new OdrlLib();
         odrl.registerPrefix("ops", "http://upm.es/operands#");
         odrl.register("ops", new Time());
         odrl.registerNative();
         EnforcePolicyResult allowedTo = new EnforcePolicyResult();
-        List<Permission> permissions = mapToPermissions(policyJson);
+        List<Permission> permissions = mapToPermissions(policyJson); 
         for (Permission permission : permissions) {
             ActionResult actions = permission.solveResult(this.prefixes);
             allowedTo.getActionResults().add(actions);

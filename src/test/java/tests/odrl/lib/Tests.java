@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -49,7 +50,7 @@ public class Tests {
     }
 
     public static String solvePolicyResultToJson(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException, IllegalAccessException {
-        return odrl.solveResultToJson(policy);
+        return odrl.solveResultToJson(policy, new HashMap<>());
     }
 
     public static EnforcePolicyResult solvePolicyResult(String policy, Map<String, Object> interpolation) throws UnsupportedFunctionException, OdrlRegistrationException,

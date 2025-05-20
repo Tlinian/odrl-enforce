@@ -2,17 +2,10 @@ package tests.odrl.lib.data;
 
 import odrl.lib.model.OdrlLib;
 import odrl.lib.model.exceptions.OdrlRegistrationException;
-import odrl.lib.model.explorer.ODRLExtractor;
 import odrl.lib.model.result.EnforcePolicyResult;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFParser;
 import org.junit.Before;
 import org.junit.Test;
 import tests.odrl.lib.Tests;
-
-import java.io.ByteArrayInputStream;
 
 public class TestIn {
 
