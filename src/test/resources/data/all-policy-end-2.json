@@ -193,7 +193,8 @@
     "xone":                 "odrl:xone",
     "and":                  "odrl:and",
     "andSequence":          "odrl:andSequence",
-
+    "process": "odrl:process",
+    "download": "odrl:download",
     "policyUsage":                "odrl:policyUsage"
 
   },
