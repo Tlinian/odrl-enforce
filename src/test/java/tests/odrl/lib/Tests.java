@@ -49,8 +49,12 @@ public class Tests {
         return odrl.solveResult(policyJson);
     }
 
-    public static String solvePolicyResultToJson(String policy) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException, IllegalAccessException {
-        return odrl.solveResultToJson(policy, new HashMap<>());
+    public static boolean solvePolicyResultForAction(String policy,  Map<String, Object> interpolation, String target, String action) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException, IllegalAccessException {
+        return odrl.solveResultForAction(policy, interpolation,  target, action);
+    }
+
+    public static String solvePolicyResultToJson(String policy,  Map<String, Object> interpolation) throws UnsupportedFunctionException, OdrlRegistrationException, OperandException, OperatorException, EvaluationException, IllegalAccessException {
+        return odrl.solveResultToJson(policy, interpolation);
     }
 
     public static EnforcePolicyResult solvePolicyResult(String policy, Map<String, Object> interpolation) throws UnsupportedFunctionException, OdrlRegistrationException,

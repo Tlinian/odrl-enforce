@@ -26,6 +26,7 @@ import odrl.lib.model.nodes.OperandFunction;
 import odrl.lib.model.nodes.OperandValue;
 import odrl.lib.model.nodes.OrOperandFunction;
 import odrl.lib.model.result.ActionResult;
+import odrl.lib.model.result.ConstraintResult;
 import odrl.lib.model.result.EnforcePolicyResult;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.jena.ext.com.google.common.collect.Maps;
@@ -55,6 +56,7 @@ import static odrl.lib.model.nodes.OperandFactory.shortenURI;
 
 public class OdrlLib {
     private static final String QUERY_REPLACEMENT = "#RULE_ID#";
+    private static final String ODRL_URL =  "http://www.w3.org/ns/odrl/2/";
 
     private static final String CONSTRAINTS_QUERY_STRING = "PREFIX odrl: <http://www.w3.org/ns/odrl/2/>\n"
             + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
@@ -179,6 +181,7 @@ public class OdrlLib {
         List<Permission> permissions = mapToPermissions(policyJson);
         for (Permission permission : permissions) {
             ActionResult actions = permission.solveResult(this.prefixes);
+            actions.setTarget(permission.getTarget());
             allowedTo.getActionResults().add(actions);
         }
         return allowedTo;
@@ -201,6 +204,30 @@ public class OdrlLib {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         return gson.toJson(allowedTo);
     }
+
+    public boolean solveResultForAction(String policy, Map<String, Object> interpolation, String target, String action)
+            throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException, OdrlRegistrationException, IllegalAccessException {
+        policy = engine.reduce(policy, interpolation, interpolation);
+        JsonObject policyJson = Policies.fromJsonld11String(policy);
+        OdrlLib odrl = new OdrlLib();
+        odrl.registerPrefix("ops", "http://upm.es/operands#");
+        odrl.register("ops", new Time());
+        odrl.registerNative();
+        List<Permission> permissions = mapToPermissions(policyJson);
+        for (Permission permission : permissions) {
+            if (permission.getTarget().equals(target)){
+                ActionResult actions = permission.solveResult(this.prefixes);
+                ConstraintResult constraintResult = actions.getActionAndConstraintResults().get(ODRL_URL+action);
+                if (constraintResult == null){
+                    return false;
+                }else {
+                    return constraintResult.getFailCons().size() <= 0;
+                }
+            }
+        }
+        return false;
+    }
+
 
     public EnforcePolicyResult solveResult(String policy, Map<String, Object> interpolation)
             throws UnsupportedFunctionException, OperandException, OperatorException, EvaluationException {

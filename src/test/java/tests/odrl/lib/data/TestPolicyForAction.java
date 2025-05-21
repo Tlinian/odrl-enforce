@@ -2,14 +2,13 @@ package tests.odrl.lib.data;
 
 import odrl.lib.model.OdrlLib;
 import odrl.lib.model.exceptions.OdrlRegistrationException;
-import odrl.lib.model.result.EnforcePolicyResult;
 import org.junit.Before;
 import org.junit.Test;
 import tests.odrl.lib.Tests;
 
 import java.util.HashMap;
 
-public class TestPolicy {
+public class TestPolicyForAction {
 
 
 
@@ -25,13 +24,21 @@ public class TestPolicy {
 
 
 	@Test
-	public void test01() throws Exception {
+	public void test01() throws Exception  {
 
-		String policy = Tests.readPolicy(dir.append("all-policy.json").toString());
+		String policy = Tests.readPolicy(dir.append("all-policy-end-3.json").toString());
 //		Map<String, List<String>> result = Tests.solvePolicy(policy);
 //		System.out.println(result);
 //		Assert.assertTrue(result.isEmpty());
 //		EnforcePolicyResult enforcePolicyResult = Tests.solvePolicyResult(policy);
-		System.out.println(Tests.solvePolicyResultToJson(policy, new HashMap<>()));
+		System.out.println(Tests.solvePolicyResultForAction(policy,new HashMap<>(){
+			{
+				put("partyRoleTeam", "tea1");
+				put("user", "userA");
+				put("userId", "userId");
+				put("readCount", "3");
+				put("app", "appA");
+			}
+		},  "https://jsonplaceholder.typicode.com/users/1", "read"));
 	}
 }

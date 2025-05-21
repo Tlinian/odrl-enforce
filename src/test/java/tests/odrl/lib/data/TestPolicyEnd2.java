@@ -6,6 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 import tests.odrl.lib.Tests;
 
+import java.util.HashMap;
+
 public class TestPolicyEnd2 {
 
 
@@ -29,6 +31,6 @@ public class TestPolicyEnd2 {
 //		System.out.println(result);
 //		Assert.assertTrue(result.isEmpty());
 //		EnforcePolicyResult enforcePolicyResult = Tests.solvePolicyResult(policy);
-		System.out.println(Tests.solvePolicyResultToJson(policy));
+		System.out.println(Tests.solvePolicyResultToJson(policy,new HashMap<>()));
 	}
 }

@@ -9,10 +9,19 @@ import java.util.List;
 import java.util.Map;
 
 public class ActionResult {
-    private Map<List<String>, ConstraintResult> actionAndConstraintResults = new HashMap<>();
+    private String target;
+    private Map<String, ConstraintResult> actionAndConstraintResults = new HashMap<>();
 
-    public Map<List<String>, ConstraintResult> getActionAndConstraintResults() {
+    public Map<String, ConstraintResult> getActionAndConstraintResults() {
         return actionAndConstraintResults;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
+    public void setTarget(String target) {
+        this.target = target;
     }
 
     @Override

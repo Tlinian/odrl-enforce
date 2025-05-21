@@ -85,7 +85,7 @@ public class Permission {
 		for(int index=0; index < this.actions.size(); index++) {
 			ConstraintResult constraintResult = this.actions.get(0).solveResult(prefixes);
 			// only permission single action
-			actionResult.getActionAndConstraintResults().put(Collections.singletonList(this.actions.get(index).getAction()), constraintResult);
+			actionResult.getActionAndConstraintResults().put(this.actions.get(index).getAction(), constraintResult);
 		}
 		return actionResult;
 	}
